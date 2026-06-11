@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sla-agent-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: sla-agent-service
+spec:
+  replicas: {{ .Values.slaAgentService.replicas }}
+  selector:
+    matchLabels:
+      app: sla-agent-service
+  template:
+    metadata:
+      labels:
+        app: sla-agent-service
+    spec:
+      volumes:
+        - name: tenant-rules
+          persistentVolumeClaim:
+            claimName: {{ .Values.slaAgentService.tenantRulesPvc }}
+        - name: github-pem
+          secret:
+            secretName: {{ .Values.slaAgentService.secret.existingSecret }}
+            items:
+              - key: github-app-pem
+                path: github-app.pem
+      containers:
+        - name: sla-agent-service
+          image: {{ .Values.global.registry }}/{{ .Values.slaAgentService.image }}:{{ .Values.global.imageTag }}
+          ports:
+            - containerPort: 8090
+          envFrom:
+            - configMapRef:
+                name: sla-agent-config
+          env:
+            - name: SLA_LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.slaAgentService.secret.existingSecret }}
+                  key: {{ .Values.slaAgentService.secret.llmApiKeyKey }}
+            - name: SLA_GITHUB_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.slaAgentService.secret.existingSecret }}
+                  key: {{ .Values.slaAgentService.secret.githubAppIdKey }}
+            - name: SLA_GITHUB_APP_INSTALLATION_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.slaAgentService.secret.existingSecret }}
+                  key: {{ .Values.slaAgentService.secret.githubInstallationIdKey }}
+            - name: SLA_GITHUB_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.slaAgentService.secret.existingSecret }}
+                  key: {{ .Values.slaAgentService.secret.githubWebhookSecretKey }}
+            - name: SLA_GITHUB_REPO_OWNER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.slaAgentService.secret.existingSecret }}
+                  key: {{ .Values.slaAgentService.secret.githubRepoOwnerKey }}
+            - name: SLA_GITHUB_REPO_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.slaAgentService.secret.existingSecret }}
+                  key: {{ .Values.slaAgentService.secret.githubRepoNameKey }}
+            - name: SLA_SLACK_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.slaAgentService.secret.existingSecret }}
+                  key: {{ .Values.slaAgentService.secret.slackBotTokenKey }}
+            - name: SLA_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.slaAgentService.secret.existingSecret }}
+                  key: {{ .Values.slaAgentService.secret.dbUrlKey }}
+          volumeMounts:
+            - name: tenant-rules
+              mountPath: /etc/prometheus/rules/tenants
+            - name: github-pem
+              mountPath: /secrets
+              readOnly: true
+          resources:
+            {{- toYaml .Values.slaAgentService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8090
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8090
+            initialDelaySeconds: 15
+            periodSeconds: 5

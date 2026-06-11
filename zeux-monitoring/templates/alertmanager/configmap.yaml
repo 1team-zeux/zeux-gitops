@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: {{ .Values.global.namespace }}
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+
+    route:
+      group_by: [tenant_id, service_name, alert_class]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 1h
+      receiver: default
+
+      routes:
+        - matchers:
+            - severity = critical
+          receiver: critical-alerts
+          continue: true
+
+        - matchers:
+            - alert_class = burn_rate
+          receiver: slo-engine-webhook
+
+    receivers:
+      - name: default
+        webhook_configs:
+          - url: {{ .Values.alertmanager.slaAgentUrl }}/api/v1/alerts
+            send_resolved: true
+
+      - name: critical-alerts
+        webhook_configs:
+          - url: {{ .Values.alertmanager.slaAgentUrl }}/api/v1/alerts
+            send_resolved: true
+
+      - name: slo-engine-webhook
+        webhook_configs:
+          - url: {{ .Values.alertmanager.slaAgentUrl }}/api/v1/alerts
+            send_resolved: true
+
+    inhibit_rules:
+      - source_matchers:
+          - severity = critical
+        target_matchers:
+          - severity = warning
+        equal: [tenant_id, service_name]

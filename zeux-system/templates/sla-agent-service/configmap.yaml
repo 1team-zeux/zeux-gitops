@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sla-agent-config
+  namespace: {{ .Values.global.namespace }}
+data:
+  SLA_PROMETHEUS_URL: {{ .Values.slaAgentService.config.prometheusUrl | quote }}
+  SLA_GRAFANA_URL: {{ .Values.slaAgentService.config.grafanaUrl | quote }}
+  SLA_OTEL_HUB_ENDPOINT: {{ .Values.slaAgentService.config.otelHubEndpoint | quote }}
+  SLA_MODEL_NAME: {{ .Values.slaAgentService.config.modelName | quote }}
+  SLA_INFRA_BASE_BRANCH: {{ .Values.slaAgentService.config.infraBaseBranch | quote }}
+  SLA_GRAFANA_USER: {{ .Values.slaAgentService.config.grafanaUser | quote }}
+  SLA_GITHUB_APP_PRIVATE_KEY_PATH: "/secrets/github-app.pem"
+  PROMETHEUS_RULES_DIR: "/etc/prometheus/rules/tenants"

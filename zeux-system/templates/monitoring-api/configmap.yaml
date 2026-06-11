@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitoring-api-config
+  namespace: {{ .Values.global.namespace }}
+data:
+  MONITORING_PROMETHEUS_URL: {{ .Values.monitoringApi.config.prometheusUrl | quote }}
+  MONITORING_LOKI_URL: {{ .Values.monitoringApi.config.lokiUrl | quote }}
+  MONITORING_TEMPO_URL: {{ .Values.monitoringApi.config.tempoUrl | quote }}

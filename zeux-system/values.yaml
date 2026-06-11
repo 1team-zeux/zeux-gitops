@@ -1,0 +1,93 @@
+global:
+  registry: "amdp-registry.skala-ai.com/skala26a-ai1"
+  imageTag: "latest"
+  namespace: zeux-system
+
+apiGateway:
+  image: zeux/api-gateway
+  replicas: 1
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+  config:
+    authServerUrl: "http://auth-server-svc.zeux-system.svc.cluster.local:8081"
+    slaAgentUrl: "http://sla-agent-service-svc.zeux-system.svc.cluster.local:8090"
+    monitoringApiUrl: "http://monitoring-api-svc.zeux-system.svc.cluster.local:8091"
+    eurekaClientEnabled: "false"
+    gatewayDiscoveryEnabled: "false"
+  secret:
+    existingSecret: api-gateway-secret
+    jwtSecretKey: jwt-secret
+
+authServer:
+  image: zeux/auth-server
+  replicas: 1
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+  secret:
+    existingSecret: auth-db-secret
+    dbUrlKey: db-url
+    dbUsernameKey: db-username
+    dbPasswordKey: db-password
+
+slaAgentService:
+  image: zeux/sla-agent-service
+  replicas: 1
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+  config:
+    prometheusUrl: "http://prometheus.zeux-monitoring.svc.cluster.local:9090"
+    grafanaUrl: "http://grafana.zeux-monitoring.svc.cluster.local:3000"
+    otelHubEndpoint: "http://otel-gateway.zeux-monitoring.svc.cluster.local:4318"
+    modelName: "gpt-4o"
+    infraBaseBranch: "main"
+    grafanaUser: "admin"
+  secret:
+    existingSecret: sla-agent-secret
+    llmApiKeyKey: llm-api-key
+    githubAppIdKey: github-app-id
+    githubInstallationIdKey: github-installation-id
+    githubWebhookSecretKey: github-webhook-secret
+    githubRepoOwnerKey: github-repo-owner
+    githubRepoNameKey: github-repo-name
+    slackBotTokenKey: slack-bot-token
+    dbUrlKey: db-url
+  tenantRulesPvc: tenant-rules
+
+monitoringApi:
+  image: zeux/monitoring-api
+  replicas: 1
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "200m"
+      memory: "512Mi"
+  config:
+    prometheusUrl: "http://prometheus.zeux-monitoring.svc.cluster.local:9090"
+    lokiUrl: "http://loki.zeux-monitoring.svc.cluster.local:3100"
+    tempoUrl: "http://tempo.zeux-monitoring.svc.cluster.local:3200"
+
+ingress:
+  enabled: true
+  host: api.zeux.com
+  className: alb
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip

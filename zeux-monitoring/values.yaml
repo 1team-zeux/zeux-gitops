@@ -1,0 +1,92 @@
+global:
+  namespace: zeux-monitoring
+
+prometheus:
+  image: prom/prometheus:v2.52.0
+  replicas: 1
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+  dataStorage: 50Gi
+  dataStorageClassName: gp3
+  rulesStorage: 5Gi
+  rulesStorageClassName: efs-sc-shared
+
+alertmanager:
+  image: prom/alertmanager:v0.27.0
+  replicas: 1
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
+  slaAgentUrl: "http://sla-agent-service-svc.zeux-system.svc.cluster.local:8090"
+
+grafana:
+  image: grafana/grafana:10.4.0
+  replicas: 1
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+  storage: 10Gi
+  storageClassName: gp3
+  secret:
+    existingSecret: grafana-secret
+    adminPasswordKey: admin-password
+  adminUser: admin
+
+loki:
+  image: grafana/loki:2.9.0
+  replicas: 1
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+  storage: 50Gi
+  storageClassName: gp3
+
+tempo:
+  image: grafana/tempo:2.4.0
+  replicas: 1
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+  storage: 50Gi
+  storageClassName: gp3
+
+otelGateway:
+  image: otel/opentelemetry-collector-contrib:0.100.0
+  replicas: 1
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+ingress:
+  enabled: true
+  host: grafana.zeux.com
+  className: alb
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip

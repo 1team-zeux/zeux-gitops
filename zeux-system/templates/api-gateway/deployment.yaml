@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: api-gateway
+spec:
+  replicas: {{ .Values.apiGateway.replicas }}
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: {{ .Values.global.registry }}/{{ .Values.apiGateway.image }}:{{ .Values.global.imageTag }}
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: api-gateway-config
+          env:
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.apiGateway.secret.existingSecret }}
+                  key: {{ .Values.apiGateway.secret.jwtSecretKey }}
+          resources:
+            {{- toYaml .Values.apiGateway.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 5

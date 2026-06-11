@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sla-agent-service-svc
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: sla-agent-service
+  ports:
+    - port: 8090
+      targetPort: 8090
+      protocol: TCP
+  type: ClusterIP

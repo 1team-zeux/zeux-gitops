@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  namespace: {{ .Values.global.namespace }}
+data:
+  AUTH_SERVER_URL: {{ .Values.apiGateway.config.authServerUrl | quote }}
+  SLA_AGENT_URL: {{ .Values.apiGateway.config.slaAgentUrl | quote }}
+  MONITORING_API_URL: {{ .Values.apiGateway.config.monitoringApiUrl | quote }}
+  EUREKA_CLIENT_ENABLED: {{ .Values.apiGateway.config.eurekaClientEnabled | quote }}
+  GATEWAY_DISCOVERY_ENABLED: {{ .Values.apiGateway.config.gatewayDiscoveryEnabled | quote }}

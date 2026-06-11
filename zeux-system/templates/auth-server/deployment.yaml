@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-server
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: auth-server
+spec:
+  replicas: {{ .Values.authServer.replicas }}
+  selector:
+    matchLabels:
+      app: auth-server
+  template:
+    metadata:
+      labels:
+        app: auth-server
+    spec:
+      containers:
+        - name: auth-server
+          image: {{ .Values.global.registry }}/{{ .Values.authServer.image }}:{{ .Values.global.imageTag }}
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.authServer.secret.existingSecret }}
+                  key: {{ .Values.authServer.secret.dbUrlKey }}
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.authServer.secret.existingSecret }}
+                  key: {{ .Values.authServer.secret.dbUsernameKey }}
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.authServer.secret.existingSecret }}
+                  key: {{ .Values.authServer.secret.dbPasswordKey }}
+          resources:
+            {{- toYaml .Values.authServer.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 5

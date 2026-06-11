@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitoring-api
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: monitoring-api
+spec:
+  replicas: {{ .Values.monitoringApi.replicas }}
+  selector:
+    matchLabels:
+      app: monitoring-api
+  template:
+    metadata:
+      labels:
+        app: monitoring-api
+    spec:
+      containers:
+        - name: monitoring-api
+          image: {{ .Values.global.registry }}/{{ .Values.monitoringApi.image }}:{{ .Values.global.imageTag }}
+          ports:
+            - containerPort: 8091
+          envFrom:
+            - configMapRef:
+                name: monitoring-api-config
+          resources:
+            {{- toYaml .Values.monitoringApi.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8091
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8091
+            initialDelaySeconds: 10
+            periodSeconds: 5

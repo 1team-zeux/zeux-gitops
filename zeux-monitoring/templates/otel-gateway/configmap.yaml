@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-gateway-config
+  namespace: {{ .Values.global.namespace }}
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          http:
+            endpoint: 0.0.0.0:4318
+            include_metadata: true
+          grpc:
+            endpoint: 0.0.0.0:4317
+
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+      headers_setter:
+        headers:
+          - action: upsert
+            key: X-Scope-OrgID
+            from_context: metadata.x-scope-orgid
+
+    processors:
+      memory_limiter:
+        limit_mib: 512
+        spike_limit_mib: 128
+        check_interval: 5s
+      batch:
+        send_batch_size: 1000
+        timeout: 5s
+      transform/loki_labels:
+        log_statements:
+          - context: resource
+            statements:
+              - set(attributes["loki.resource.labels"], "tenant_id")
+
+    exporters:
+      prometheusremotewrite:
+        endpoint: http://prometheus.{{ .Values.global.namespace }}.svc.cluster.local:9090/api/v1/write
+        tls:
+          insecure: true
+        resource_to_telemetry_conversion:
+          enabled: true
+
+      loki:
+        endpoint: http://loki.{{ .Values.global.namespace }}.svc.cluster.local:3100/loki/api/v1/push
+        default_labels_enabled:
+          exporter: false
+          job: true
+          level: true
+
+      otlp/tempo:
+        endpoint: tempo.{{ .Values.global.namespace }}.svc.cluster.local:4317
+        tls:
+          insecure: true
+
+    service:
+      extensions: [health_check]
+      pipelines:
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [prometheusremotewrite]
+
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, transform/loki_labels, batch]
+          exporters: [loki]
+
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [otlp/tempo]
+
+      telemetry:
+        logs:
+          level: warn

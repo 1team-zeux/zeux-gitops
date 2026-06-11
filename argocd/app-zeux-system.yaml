@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: zeux-system
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/1team-zeux/zeux-gitops
+    targetRevision: main
+    path: helm/zeux-system
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: zeux-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

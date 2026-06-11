@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-gateway
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: otel-gateway
+spec:
+  replicas: {{ .Values.otelGateway.replicas }}
+  selector:
+    matchLabels:
+      app: otel-gateway
+  template:
+    metadata:
+      labels:
+        app: otel-gateway
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: otel-gateway-config
+      containers:
+        - name: otel-gateway
+          image: {{ .Values.otelGateway.image }}
+          args:
+            - "--config=/etc/otelcol-contrib/config.yaml"
+          ports:
+            - containerPort: 4318
+            - containerPort: 4317
+            - containerPort: 8888
+            - containerPort: 13133
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otelcol-contrib/config.yaml
+              subPath: config.yaml
+          resources:
+            {{- toYaml .Values.otelGateway.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 13133
+            initialDelaySeconds: 15
+            periodSeconds: 10

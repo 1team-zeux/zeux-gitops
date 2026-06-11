@@ -1,0 +1,6 @@
+apiVersion: v2
+name: zeux-system
+description: ZeuX business services (api-gateway, auth-server, sla-agent-service, monitoring-api)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

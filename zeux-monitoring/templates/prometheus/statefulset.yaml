@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: prometheus
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: prometheus
+spec:
+  replicas: {{ .Values.prometheus.replicas }}
+  serviceName: prometheus
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-config
+        - name: tenant-rules
+          persistentVolumeClaim:
+            claimName: tenant-rules
+      containers:
+        - name: prometheus
+          image: {{ .Values.prometheus.image }}
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus"
+            - "--storage.tsdb.retention.time=30d"
+            - "--web.enable-lifecycle"
+          ports:
+            - containerPort: 9090
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus/prometheus.yml
+              subPath: prometheus.yml
+            - name: tenant-rules
+              mountPath: /etc/prometheus/tenant-rules
+            - name: prometheus-data
+              mountPath: /prometheus
+          resources:
+            {{- toYaml .Values.prometheus.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9090
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9090
+            initialDelaySeconds: 15
+            periodSeconds: 5
+  volumeClaimTemplates:
+    - metadata:
+        name: prometheus-data
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: {{ .Values.prometheus.dataStorageClassName }}
+        resources:
+          requests:
+            storage: {{ .Values.prometheus.dataStorage }}
