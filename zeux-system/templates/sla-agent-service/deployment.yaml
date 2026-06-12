@@ -25,6 +25,8 @@ spec:
             items:
               - key: github-app-pem
                 path: github-app.pem
+      imagePullSecrets:
+        - name: harbor-secret
       containers:
         - name: sla-agent-service
           image: {{ .Values.global.registry }}/{{ .Values.slaAgentService.image }}:{{ .Values.global.imageTag }}
