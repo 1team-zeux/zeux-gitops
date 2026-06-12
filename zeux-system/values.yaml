@@ -1,6 +1,6 @@
 global:
   registry: "amdp-registry.skala-ai.com/skala26a-ai1"
-  imageTag: "8bc00f78c9770e416eb5669bfcdcecc7e69f01ff"
+  imageTag: "f6519fc02c5a3a82a4c7fa90c49f677fdac4ee0b"
   namespace: zeux-system
 
 apiGateway:
