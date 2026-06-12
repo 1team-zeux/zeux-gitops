@@ -1,5 +1,5 @@
 global:
-  namespace: zeux-monitoring
+  namespace: skala3-finalproj-class1-team1
 
 prometheus:
   image: prom/prometheus:v2.52.0
@@ -26,7 +26,7 @@ alertmanager:
     limits:
       cpu: "200m"
       memory: "256Mi"
-  slaAgentUrl: "http://sla-agent-service-svc.zeux-system.svc.cluster.local:8090"
+  slaAgentUrl: "http://sla-agent-service-svc.skala3-finalproj-class1-team1.svc.cluster.local:8090"
 
 grafana:
   image: grafana/grafana:10.4.0

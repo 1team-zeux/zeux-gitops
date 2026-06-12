@@ -68,6 +68,8 @@ slaAgentService:
     slackBotTokenKey: slack-bot-token
     dbUrlKey: db-url
   tenantRulesPvc: tenant-rules
+  tenantRulesStorage: 5Gi
+  tenantRulesStorageClassName: efs-sc-shared
 
 monitoringApi:
   image: 1team-monitoring-api
