@@ -11,7 +11,7 @@ spec:
     path: zeux-monitoring
   destination:
     server: https://kubernetes.default.svc
-    namespace: zeux-monitoring
+    namespace: skala3-finalproj-class1-team1
   syncPolicy:
     automated:
       prune: true
