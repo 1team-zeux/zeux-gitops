@@ -30,12 +30,19 @@ spec:
           volumeMounts:
             - name: mysql-data
               mountPath: /var/lib/mysql
+            - name: mysql-init-sql
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
           readinessProbe:
             exec:
               command: ["mysqladmin", "ping", "-h", "localhost", "-uroot", "-p$(MYSQL_ROOT_PASSWORD)"]
             initialDelaySeconds: 20
             periodSeconds: 10
             failureThreshold: 12
+      volumes:
+        - name: mysql-init-sql
+          configMap:
+            name: mysql-init-sql
   volumeClaimTemplates:
     - metadata:
         name: mysql-data
