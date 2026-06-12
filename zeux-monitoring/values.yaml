@@ -84,9 +84,12 @@ otelGateway:
 
 ingress:
   enabled: true
-  host: grafana.zeux.com
-  className: alb
+  host: grafana-zeux.skala25a.project.skala-ai.com
+  className: public-nginx
   annotations:
-    kubernetes.io/ingress.class: alb
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/target-type: ip
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  tls:
+    enabled: true
+    secretName: grafana-zeux-tls
