@@ -1,7 +1,8 @@
 global:
   registry: "amdp-registry.skala-ai.com/skala26a-ai1"
-  imageTag: "f6519fc02c5a3a82a4c7fa90c49f677fdac4ee0b"
-  namespace: zeux-system
+  imageTag: "a61babbe29dfc9615719e5a3ed2c6065a719e64d"
+  namespace: skala3-finalproj-class1-team1
+
 
 apiGateway:
   image: 1team-api-gateway
@@ -14,9 +15,9 @@ apiGateway:
       cpu: "500m"
       memory: "1Gi"
   config:
-    authServerUrl: "http://auth-server-svc.zeux-system.svc.cluster.local:8081"
-    slaAgentUrl: "http://sla-agent-service-svc.zeux-system.svc.cluster.local:8090"
-    monitoringApiUrl: "http://monitoring-api-svc.zeux-system.svc.cluster.local:8091"
+    authServerUrl: "http://auth-server-svc.skala3-finalproj-class1-team1.svc.cluster.local:8081"
+    slaAgentUrl: "http://sla-agent-service-svc.skala3-finalproj-class1-team1.svc.cluster.local:8090"
+    monitoringApiUrl: "http://monitoring-api-svc.skala3-finalproj-class1-team1.svc.cluster.local:8091"
     eurekaClientEnabled: "false"
     gatewayDiscoveryEnabled: "false"
   secret:
@@ -50,9 +51,9 @@ slaAgentService:
       cpu: "1000m"
       memory: "2Gi"
   config:
-    prometheusUrl: "http://prometheus.zeux-monitoring.svc.cluster.local:9090"
-    grafanaUrl: "http://grafana.zeux-monitoring.svc.cluster.local:3000"
-    otelHubEndpoint: "http://otel-gateway.zeux-monitoring.svc.cluster.local:4318"
+    prometheusUrl: "http://prometheus.skala3-finalproj-class1-team1.svc.cluster.local:9090"
+    grafanaUrl: "http://grafana.skala3-finalproj-class1-team1.svc.cluster.local:3000"
+    otelHubEndpoint: "http://otel-gateway.skala3-finalproj-class1-team1.svc.cluster.local:4318"
     modelName: "gpt-4o"
     infraBaseBranch: "main"
     grafanaUser: "admin"
@@ -79,9 +80,9 @@ monitoringApi:
       cpu: "200m"
       memory: "512Mi"
   config:
-    prometheusUrl: "http://prometheus.zeux-monitoring.svc.cluster.local:9090"
-    lokiUrl: "http://loki.zeux-monitoring.svc.cluster.local:3100"
-    tempoUrl: "http://tempo.zeux-monitoring.svc.cluster.local:3200"
+    prometheusUrl: "http://prometheus.skala3-finalproj-class1-team1.svc.cluster.local:9090"
+    lokiUrl: "http://loki.skala3-finalproj-class1-team1.svc.cluster.local:3100"
+    tempoUrl: "http://tempo.skala3-finalproj-class1-team1.svc.cluster.local:3200"
 
 mariadb:
   database: zeux
