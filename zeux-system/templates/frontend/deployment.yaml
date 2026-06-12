@@ -22,6 +22,15 @@ spec:
           image: {{ .Values.global.registry }}/{{ .Values.frontend.image }}:{{ .Values.frontend.imageTag }}
           ports:
             - containerPort: 80
+          env:
+            - name: AUTH_SERVER_URL
+              value: "http://auth-server-svc:8080"
+            - name: SLA_AGENT_URL
+              value: "http://sla-agent-service-svc:8090"
+            - name: MONITORING_API_URL
+              value: "http://monitoring-api-svc:8091"
+            - name: API_GATEWAY_URL
+              value: "http://api-gateway-svc:8080"
           resources:
             {{- toYaml .Values.frontend.resources | nindent 12 }}
           livenessProbe:
