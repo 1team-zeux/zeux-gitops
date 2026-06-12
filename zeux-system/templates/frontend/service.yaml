@@ -1,12 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: mysql-svc
+  name: frontend-svc
   namespace: {{ .Values.global.namespace }}
 spec:
   selector:
-    app: 1team-mysql
+    app: frontend
   ports:
-    - port: 3306
-      targetPort: 3306
-  clusterIP: None
+    - port: 80
+      targetPort: 80

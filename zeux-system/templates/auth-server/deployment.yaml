@@ -21,7 +21,7 @@ spec:
         - name: auth-server
           image: {{ .Values.global.registry }}/{{ .Values.authServer.image }}:{{ .Values.global.imageTag }}
           ports:
-            - containerPort: 8081
+            - containerPort: 8080
           env:
             - name: SPRING_DATASOURCE_URL
               valueFrom:
@@ -38,17 +38,24 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.authServer.secret.existingSecret }}
                   key: {{ .Values.authServer.secret.dbPasswordKey }}
+            - name: EUREKA_CLIENT_ENABLED
+              value: "false"
+            - name: EUREKA_CLIENT_REGISTERWITHEUREKA
+              value: "false"
+            - name: EUREKA_CLIENT_FETCHREGISTRY
+              value: "false"
           resources:
             {{- toYaml .Values.authServer.resources | nindent 12 }}
           livenessProbe:
             httpGet:
               path: /actuator/health
-              port: 8081
-            initialDelaySeconds: 30
+              port: 8080
+            initialDelaySeconds: 60
             periodSeconds: 10
+            failureThreshold: 5
           readinessProbe:
             httpGet:
               path: /actuator/health
-              port: 8081
-            initialDelaySeconds: 15
+              port: 8080
+            initialDelaySeconds: 30
             periodSeconds: 5

@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sla-topology-catalog-fix
+  namespace: {{ .Values.global.namespace }}
+data:
+  topology_catalog_registry.py: |
+    from __future__ import annotations
+
+    from pathlib import Path
+
+    # 토폴로지 룰과 추정 로직이 함께 쓰는 정적 카탈로그 값.
+    # parents[3] → parents[1] 버그 수정 (이미지 내 경로 오류)
+
+    CATALOG_SOURCE_PATH = Path(__file__).resolve().parents[1] / "docs_inputs" / "ZeuX_V04_토폴로지_결정_카탈로그.md"
+
+    CONCEPT_META = {
+        "balanced": {"label": "균형안", "cost_factor": 1.0},
+        "cost_optimized": {"label": "비용 우선안", "cost_factor": 0.78},
+        "reliability_optimized": {"label": "안정성 우선안", "cost_factor": 1.28},
+    }
+
+    REGION_OPTIONS = {
+        "R1": {"label": "Single Region 1 AZ", "availability": 99.5, "az_count": 1},
+        "R2": {"label": "Single Region 2 AZ", "availability": 99.95, "az_count": 2},
+        "R3": {"label": "Single Region 3 AZ", "availability": 99.99, "az_count": 3},
+    }
+
+    DATABASE_OPTIONS = {
+        "D2": {"label": "RDS Single-AZ", "availability": 99.5},
+        "D3": {"label": "RDS Multi-AZ", "availability": 99.95},
+        "D4": {"label": "RDS Multi-AZ + Read Replica", "availability": 99.99},
+        "none": {"label": "DB 없음", "availability": 100.0},
+    }
+
+    PERSISTENCE_OPTIONS = {
+        "P1": {"label": "자동 백업 7일", "rpo_minutes": 1440},
+        "P2": {"label": "자동 백업 + 수동 Snapshot", "rpo_minutes": 1440},
+        "P3": {"label": "자동 백업 + PITR", "rpo_minutes": 5},
+        "none": {"label": "영속성 패턴 없음", "rpo_minutes": None},
+    }

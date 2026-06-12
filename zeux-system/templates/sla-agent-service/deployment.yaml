@@ -16,6 +16,9 @@ spec:
         app: sla-agent-service
     spec:
       volumes:
+        - name: topology-catalog-fix
+          configMap:
+            name: sla-topology-catalog-fix
         - name: tenant-rules
           persistentVolumeClaim:
             claimName: {{ .Values.slaAgentService.tenantRulesPvc }}
@@ -77,6 +80,9 @@ spec:
                   name: {{ .Values.slaAgentService.secret.existingSecret }}
                   key: {{ .Values.slaAgentService.secret.dbUrlKey }}
           volumeMounts:
+            - name: topology-catalog-fix
+              mountPath: /app/services/topology_catalog_registry.py
+              subPath: topology_catalog_registry.py
             - name: tenant-rules
               mountPath: /etc/prometheus/rules/tenants
             - name: github-pem
