@@ -83,6 +83,22 @@ monitoringApi:
     lokiUrl: "http://loki.zeux-monitoring.svc.cluster.local:3100"
     tempoUrl: "http://tempo.zeux-monitoring.svc.cluster.local:3200"
 
+mariadb:
+  database: zeux
+  username: zeux
+  storage: 1Gi
+  secret:
+    existingSecret: mariadb-secret
+    rootPasswordKey: root-password
+    passwordKey: user-password
+
+mysql:
+  database: zeux
+  storage: 1Gi
+  secret:
+    existingSecret: mysql-secret
+    rootPasswordKey: root-password
+
 ingress:
   enabled: true
   host: api.zeux.com

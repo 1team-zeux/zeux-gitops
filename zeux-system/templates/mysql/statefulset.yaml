@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: 1team-mysql
+  namespace: {{ .Values.global.namespace }}
+spec:
+  serviceName: 1team-mysql-svc
+  replicas: 1
+  selector:
+    matchLabels:
+      app: 1team-mysql
+  template:
+    metadata:
+      labels:
+        app: 1team-mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mysql.secret.existingSecret }}
+                  key: {{ .Values.mysql.secret.rootPasswordKey }}
+            - name: MYSQL_DATABASE
+              value: {{ .Values.mysql.database }}
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+          readinessProbe:
+            exec:
+              command: ["mysqladmin", "ping", "-h", "localhost", "-uroot", "-p$(MYSQL_ROOT_PASSWORD)"]
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 12
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.mysql.storage }}
