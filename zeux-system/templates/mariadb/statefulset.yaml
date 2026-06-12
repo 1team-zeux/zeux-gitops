@@ -4,7 +4,7 @@ metadata:
   name: 1team-mariadb
   namespace: {{ .Values.global.namespace }}
 spec:
-  serviceName: 1team-mariadb-svc
+  serviceName: mariadb-svc
   replicas: 1
   selector:
     matchLabels:
