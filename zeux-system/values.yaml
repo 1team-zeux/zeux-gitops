@@ -3,6 +3,7 @@ global:
   imageTag: "a61babbe29dfc9615719e5a3ed2c6065a719e64d"
   namespace: skala3-finalproj-class1-team1
 
+
 apiGateway:
   image: 1team-api-gateway
   replicas: 1
