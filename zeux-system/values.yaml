@@ -4,7 +4,7 @@ global:
   namespace: zeux-system
 
 apiGateway:
-  image: zeux/api-gateway
+  image: 1team-api-gateway
   replicas: 1
   resources:
     requests:
@@ -24,7 +24,7 @@ apiGateway:
     jwtSecretKey: jwt-secret
 
 authServer:
-  image: zeux/auth-server
+  image: 1team-auth-server
   replicas: 1
   resources:
     requests:
@@ -40,7 +40,7 @@ authServer:
     dbPasswordKey: db-password
 
 slaAgentService:
-  image: zeux/sla-agent-service
+  image: 1team-sla-agent-service
   replicas: 1
   resources:
     requests:
@@ -69,7 +69,7 @@ slaAgentService:
   tenantRulesPvc: tenant-rules
 
 monitoringApi:
-  image: zeux/monitoring-api
+  image: 1team-monitoring-api
   replicas: 1
   resources:
     requests:
