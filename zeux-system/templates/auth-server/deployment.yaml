@@ -48,14 +48,14 @@ spec:
             {{- toYaml .Values.authServer.resources | nindent 12 }}
           livenessProbe:
             httpGet:
-              path: /actuator/health
+              path: /health
               port: 8080
             initialDelaySeconds: 60
             periodSeconds: 10
             failureThreshold: 5
           readinessProbe:
             httpGet:
-              path: /actuator/health
+              path: /health
               port: 8080
             initialDelaySeconds: 30
             periodSeconds: 5
