@@ -15,7 +15,7 @@ apiGateway:
       cpu: "500m"
       memory: "1Gi"
   config:
-    authServerUrl: "http://auth-server-svc.skala3-finalproj-class1-team1.svc.cluster.local:8081"
+    authServerUrl: "http://auth-server-svc.skala3-finalproj-class1-team1.svc.cluster.local:8080"
     slaAgentUrl: "http://sla-agent-service-svc.skala3-finalproj-class1-team1.svc.cluster.local:8090"
     monitoringApiUrl: "http://monitoring-api-svc.skala3-finalproj-class1-team1.svc.cluster.local:8091"
     eurekaClientEnabled: "false"
