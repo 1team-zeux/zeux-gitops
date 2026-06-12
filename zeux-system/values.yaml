@@ -1,9 +1,7 @@
 global:
   registry: "amdp-registry.skala-ai.com/skala26a-ai1"
-  imageTag: "5807ecfbb2a6746d2e0ed682c2f33d19d8f6b4df"
+  imageTag: "bef0e68b1bf9f6442d0b9218698e2125afc17d42"
   namespace: skala3-finalproj-class1-team1
-
-
 apiGateway:
   image: 1team-api-gateway
   replicas: 1
@@ -23,7 +21,6 @@ apiGateway:
   secret:
     existingSecret: api-gateway-secret
     jwtSecretKey: jwt-secret
-
 authServer:
   image: 1team-auth-server
   replicas: 1
@@ -39,7 +36,6 @@ authServer:
     dbUrlKey: db-url
     dbUsernameKey: db-username
     dbPasswordKey: db-password
-
 slaAgentService:
   image: 1team-sla-agent-service
   replicas: 1
@@ -70,7 +66,6 @@ slaAgentService:
   tenantRulesPvc: tenant-rules
   tenantRulesStorage: 5Gi
   tenantRulesStorageClassName: efs-sc-shared
-
 monitoringApi:
   image: 1team-monitoring-api
   replicas: 1
@@ -85,7 +80,6 @@ monitoringApi:
     prometheusUrl: "http://prometheus.skala3-finalproj-class1-team1.svc.cluster.local:9090"
     lokiUrl: "http://loki.skala3-finalproj-class1-team1.svc.cluster.local:3100"
     tempoUrl: "http://tempo.skala3-finalproj-class1-team1.svc.cluster.local:3200"
-
 mariadb:
   database: zeux
   username: zeux
@@ -94,14 +88,12 @@ mariadb:
     existingSecret: mariadb-secret
     rootPasswordKey: root-password
     passwordKey: user-password
-
 mysql:
   database: zeux
   storage: 1Gi
   secret:
     existingSecret: mysql-secret
     rootPasswordKey: root-password
-
 ingress:
   enabled: false
   host: api-zeux.skala25a.project.skala-ai.com
@@ -113,7 +105,6 @@ ingress:
   tls:
     enabled: true
     secretName: api-zeux-tls
-
 frontend:
   image: 1team-frontend
   imageTag: "latest"
