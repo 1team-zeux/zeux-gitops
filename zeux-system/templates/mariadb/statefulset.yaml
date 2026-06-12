@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: 1team-mariadb
+  namespace: {{ .Values.global.namespace }}
+spec:
+  serviceName: 1team-mariadb-svc
+  replicas: 1
+  selector:
+    matchLabels:
+      app: 1team-mariadb
+  template:
+    metadata:
+      labels:
+        app: 1team-mariadb
+    spec:
+      containers:
+        - name: mariadb
+          image: mariadb:10.11
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MARIADB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mariadb.secret.existingSecret }}
+                  key: {{ .Values.mariadb.secret.rootPasswordKey }}
+            - name: MARIADB_DATABASE
+              value: {{ .Values.mariadb.database }}
+            - name: MARIADB_USER
+              value: {{ .Values.mariadb.username }}
+            - name: MARIADB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mariadb.secret.existingSecret }}
+                  key: {{ .Values.mariadb.secret.passwordKey }}
+          volumeMounts:
+            - name: mariadb-data
+              mountPath: /var/lib/mysql
+          readinessProbe:
+            exec:
+              command: ["healthcheck.sh", "--connect", "--innodb_initialized"]
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 12
+  volumeClaimTemplates:
+    - metadata:
+        name: mariadb-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.mariadb.storage }}
