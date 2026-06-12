@@ -15,6 +15,8 @@ spec:
       labels:
         app: monitoring-api
     spec:
+      imagePullSecrets:
+        - name: harbor-secret
       containers:
         - name: monitoring-api
           image: {{ .Values.global.registry }}/{{ .Values.monitoringApi.image }}:{{ .Values.global.imageTag }}
