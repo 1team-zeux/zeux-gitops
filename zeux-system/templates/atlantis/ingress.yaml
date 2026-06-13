@@ -1,0 +1,28 @@
+{{- if .Values.atlantis.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: atlantis-ingress
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    {{- toYaml .Values.atlantis.ingress.annotations | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.atlantis.ingress.className }}
+  {{- if .Values.atlantis.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.atlantis.ingress.host }}
+      secretName: {{ .Values.atlantis.ingress.tls.secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.atlantis.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: atlantis-svc
+                port:
+                  number: 4141
+{{- end }}

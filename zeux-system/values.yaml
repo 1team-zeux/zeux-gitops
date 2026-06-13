@@ -133,3 +133,37 @@ frontend:
     tls:
       enabled: true
       secretName: fe-zeux-tls
+atlantis:
+  image: ghcr.io/runatlantis/atlantis
+  imageTag: "v0.32.0"
+  storage: 5Gi
+  storageClassName: gp3
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+  config:
+    atlantisUrl: "https://atlantis.skala25a.project.skala-ai.com"
+    ghAppId: "3672028"
+    ghAppInstallationId: "131294114"
+    repoAllowlist: "github.com/1team-zeux/infra-repo"
+    logLevel: "info"
+    slaAgentUrl: "http://sla-agent-service-svc:8090"
+  secret:
+    existingSecret: atlantis-secret
+    webhookSecretKey: gh-webhook-secret
+    ghAppKeyFileKey: github-app.pem
+  ingress:
+    enabled: true
+    host: atlantis.skala25a.project.skala-ai.com
+    className: public-nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    tls:
+      enabled: true
+      secretName: atlantis-tls

@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: atlantis
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: atlantis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: atlantis
+  template:
+    metadata:
+      labels:
+        app: atlantis
+    spec:
+      containers:
+        - name: atlantis
+          image: {{ .Values.atlantis.image }}:{{ .Values.atlantis.imageTag }}
+          args:
+            - server
+            - --repo-config=/etc/atlantis/repos.yaml
+          ports:
+            - containerPort: 4141
+          env:
+            - name: ATLANTIS_URL
+              value: {{ .Values.atlantis.config.atlantisUrl }}
+            - name: ATLANTIS_GH_APP_ID
+              value: "{{ .Values.atlantis.config.ghAppId }}"
+            - name: ATLANTIS_GH_APP_INSTALLATION_ID
+              value: "{{ .Values.atlantis.config.ghAppInstallationId }}"
+            - name: ATLANTIS_GH_APP_KEY_FILE
+              value: /etc/atlantis/github-app.pem
+            - name: ATLANTIS_GH_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.atlantis.secret.existingSecret }}
+                  key: {{ .Values.atlantis.secret.webhookSecretKey }}
+            - name: ATLANTIS_WRITE_GIT_CREDS
+              value: "true"
+            - name: ATLANTIS_REPO_ALLOWLIST
+              value: {{ .Values.atlantis.config.repoAllowlist }}
+            - name: ATLANTIS_LOG_LEVEL
+              value: {{ .Values.atlantis.config.logLevel }}
+            - name: ATLANTIS_PORT
+              value: "4141"
+            - name: TF_PLUGIN_CACHE_DIR
+              value: /tmp/tf-plugin-cache
+            - name: SLA_AGENT_URL
+              value: {{ .Values.atlantis.config.slaAgentUrl }}
+          volumeMounts:
+            - name: repos-config
+              mountPath: /etc/atlantis/repos.yaml
+              subPath: repos.yaml
+            - name: gh-app-key
+              mountPath: /etc/atlantis/github-app.pem
+              subPath: github-app.pem
+            - name: atlantis-data
+              mountPath: /atlantis
+          resources:
+            {{- toYaml .Values.atlantis.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 4141
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 4141
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: repos-config
+          configMap:
+            name: atlantis-config
+        - name: gh-app-key
+          secret:
+            secretName: {{ .Values.atlantis.secret.existingSecret }}
+            items:
+              - key: {{ .Values.atlantis.secret.ghAppKeyFileKey }}
+                path: github-app.pem
+        - name: atlantis-data
+          persistentVolumeClaim:
+            claimName: atlantis-data
