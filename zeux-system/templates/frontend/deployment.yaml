@@ -22,6 +22,15 @@ spec:
           image: {{ .Values.global.registry }}/{{ .Values.frontend.image }}:{{ .Values.frontend.imageTag }}
           ports:
             - containerPort: 80
+          env:
+            - name: AUTH_SERVER_URL
+              value: {{ .Values.frontend.env.authServerUrl }}
+            - name: SLA_AGENT_URL
+              value: {{ .Values.frontend.env.slaAgentUrl }}
+            - name: MONITORING_API_URL
+              value: {{ .Values.frontend.env.monitoringApiUrl }}
+            - name: API_GATEWAY_URL
+              value: {{ .Values.frontend.env.apiGatewayUrl }}
           resources:
             {{- toYaml .Values.frontend.resources | nindent 12 }}
           livenessProbe:

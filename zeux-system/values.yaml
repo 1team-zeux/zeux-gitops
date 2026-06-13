@@ -116,6 +116,11 @@ frontend:
     limits:
       cpu: "200m"
       memory: "256Mi"
+  env:
+    authServerUrl: "http://auth-server-svc:8080"
+    slaAgentUrl: "http://sla-agent-service-svc:8090"
+    monitoringApiUrl: "http://monitoring-api-svc:8091"
+    apiGatewayUrl: "http://api-gateway-svc:8080"
   ingress:
     enabled: true
     host: zeux.skala25a.project.skala-ai.com
@@ -124,6 +129,7 @@ frontend:
       cert-manager.io/cluster-issuer: letsencrypt-prod
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/proxy-body-size: "50m"
     tls:
       enabled: true
       secretName: fe-zeux-tls
