@@ -1,6 +1,6 @@
 global:
   registry: "amdp-registry.skala-ai.com/skala26a-ai1"
-  imageTag: "9577252131465492d8c77e415e6914a5d6c43063"
+  imageTag: "a4bbe903d765efea4593f6f94a2b0d6122ea7f15"
   namespace: skala3-finalproj-class1-team1
 apiGateway:
   image: 1team-api-gateway
