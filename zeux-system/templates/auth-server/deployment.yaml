@@ -38,6 +38,11 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.authServer.secret.existingSecret }}
                   key: {{ .Values.authServer.secret.dbPasswordKey }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.apiGateway.secret.existingSecret }}
+                  key: {{ .Values.apiGateway.secret.jwtSecretKey }}
             - name: EUREKA_CLIENT_ENABLED
               value: "false"
             - name: EUREKA_CLIENT_REGISTERWITHEUREKA
