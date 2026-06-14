@@ -1,6 +1,6 @@
 global:
   registry: "amdp-registry.skala-ai.com/skala26a-ai1"
-  imageTag: "f5f6427d0ab1e3a7d2b7686e716a59a6ec710f20"
+  imageTag: "d6b907b9986dfbacf0442d197e4a3328882a062e"
   namespace: skala3-finalproj-class1-team1
 apiGateway:
   image: 1team-api-gateway
@@ -107,7 +107,7 @@ ingress:
     secretName: api-zeux-tls
 frontend:
   image: 1team-frontend
-  imageTag: "40669e8bef897703d74e82f462ce53af0f9aed9b"
+  imageTag: "88c50e15b43d221a88ce53d728837d6b995c5708"
   replicas: 1
   resources:
     requests:
