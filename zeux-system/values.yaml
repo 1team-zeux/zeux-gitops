@@ -54,6 +54,7 @@ slaAgentService:
     infraBaseBranch: "main"
     grafanaUser: "admin"
     baseUrl: "https://api-zeux.skala25a.project.skala-ai.com"
+    authServerUrl: "http://auth-server-svc.skala3-finalproj-class1-team1.svc.cluster.local:8080"
   secret:
     existingSecret: sla-agent-secret
     llmApiKeyKey: llm-api-key
