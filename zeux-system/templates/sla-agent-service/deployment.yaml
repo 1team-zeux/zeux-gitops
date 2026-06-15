@@ -14,6 +14,8 @@ spec:
     metadata:
       labels:
         app: sla-agent-service
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/sla-agent-service/configmap.yaml") . | sha256sum }}
     spec:
       volumes:
         - name: topology-catalog-fix
