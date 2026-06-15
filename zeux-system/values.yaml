@@ -49,7 +49,7 @@ slaAgentService:
   config:
     prometheusUrl: "http://prometheus.skala3-finalproj-class1-team1.svc.cluster.local:9090"
     grafanaUrl: "http://grafana.skala3-finalproj-class1-team1.svc.cluster.local:3000"
-    otelHubEndpoint: "http://otel-gateway.skala3-finalproj-class1-team1.svc.cluster.local:4318"
+    otelHubEndpoint: "https://otel-zeux.skala25a.project.skala-ai.com"
     modelName: "gpt-4o"
     infraBaseBranch: "main"
     grafanaUser: "admin"

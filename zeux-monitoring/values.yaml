@@ -93,3 +93,16 @@ ingress:
   tls:
     enabled: true
     secretName: grafana-zeux-tls
+
+otelIngress:
+  enabled: true
+  host: otel-zeux.skala25a.project.skala-ai.com
+  className: public-nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+  tls:
+    enabled: true
+    secretName: otel-zeux-tls
