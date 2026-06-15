@@ -12,3 +12,4 @@ data:
   SLA_GRAFANA_USER: {{ .Values.slaAgentService.config.grafanaUser | quote }}
   SLA_GITHUB_APP_PRIVATE_KEY_PATH: "/secrets/github-app.pem"
   PROMETHEUS_RULES_DIR: "/etc/prometheus/rules/tenants"
+  SLA_BASE_URL: {{ .Values.slaAgentService.config.baseUrl | quote }}

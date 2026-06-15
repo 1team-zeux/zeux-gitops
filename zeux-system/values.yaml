@@ -53,6 +53,7 @@ slaAgentService:
     modelName: "gpt-4o"
     infraBaseBranch: "main"
     grafanaUser: "admin"
+    baseUrl: "https://api-zeux.skala25a.project.skala-ai.com"
   secret:
     existingSecret: sla-agent-secret
     llmApiKeyKey: llm-api-key
