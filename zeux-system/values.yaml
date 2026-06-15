@@ -95,7 +95,7 @@ mysql:
     existingSecret: mysql-secret
     rootPasswordKey: root-password
 ingress:
-  enabled: false
+  enabled: true
   host: api-zeux.skala25a.project.skala-ai.com
   className: public-nginx
   annotations:
