@@ -1,6 +1,6 @@
 global:
   registry: "amdp-registry.skala-ai.com/skala26a-ai1"
-  imageTag: "3fe1b5eb51a26e39e5e56adf02fbb7bd934f0aeb"
+  imageTag: "9d610ac3d38a403b122b735934278c6ea10b92ca"
   namespace: skala3-finalproj-class1-team1
 apiGateway:
   image: 1team-api-gateway
@@ -54,6 +54,7 @@ slaAgentService:
     infraBaseBranch: "main"
     grafanaUser: "admin"
     baseUrl: "https://api-zeux.skala25a.project.skala-ai.com"
+    authServerUrl: "http://auth-server-svc.skala3-finalproj-class1-team1.svc.cluster.local:8080"
   secret:
     existingSecret: sla-agent-secret
     llmApiKeyKey: llm-api-key
@@ -108,7 +109,7 @@ ingress:
     secretName: api-zeux-tls
 frontend:
   image: 1team-frontend
-  imageTag: "361d629cd2dc980bc40f168ba2ad447880aeb32c"
+  imageTag: "f6dbeed67bc21459e8cfc55fc330684a593421d3"
   replicas: 1
   resources:
     requests:
