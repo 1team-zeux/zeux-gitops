@@ -1029,3 +1029,318 @@ data:
     SET SQL_MODE=@OLD_SQL_MODE;
     SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
     SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
+
+  v2_demo_seed.sql: |
+    -- =============================================================
+    -- v2_demo_seed.sql
+    -- Demo scenario: SKT T-Universe — AI Chatbot P1 장애 진행 중
+    SET NAMES utf8mb4;
+    --
+    -- 시나리오 흐름:
+    --   1. 4개 서비스 정상 운영
+    --   2. Subscription API: Burn Rate 2.31 (경고) — Alert 발생
+    --   3. AI Chatbot: Burn Rate 5.12 (긴급) — P1 장애 진행 중
+    --      → Alert 분류 완료 → RCA 완료 → HITL 승인 대기 중
+    -- =============================================================
+
+    USE `zeux`;
+    SET FOREIGN_KEY_CHECKS = 0;
+
+    -- ---------------------------------------------------------------
+    -- customers
+    -- ---------------------------------------------------------------
+    INSERT INTO customers (id, customer_name, customer_code, contact_email, created_at, updated_at) VALUES
+    (1, 'SK Telecom', 'SKT', 'ops-contact@sktelecom.com', '2026-01-01 00:00:00', '2026-01-01 00:00:00');
+
+    -- ---------------------------------------------------------------
+    -- business_units
+    -- ---------------------------------------------------------------
+    INSERT INTO business_units (id, customer_id, bu_name, bu_code, application_name, manager_email, business_domain, business_description, contract_start_date, contract_end_date, subscription_tier, created_at, updated_at) VALUES
+    (1, 1, 'T universe 사업부', 'SKT-TU', 'T universe', 'tu-ops@sktelecom.com', 'media', 'SKT T universe 미디어 플랫폼 서비스', '2026-01-01', '2026-12-31', 'Enterprise', '2026-01-01 00:00:00', '2026-01-01 00:00:00');
+
+    -- ---------------------------------------------------------------
+    -- business_unit_requirements
+    -- ---------------------------------------------------------------
+    INSERT INTO business_unit_requirements (id, business_unit_id, csp, primary_region, multi_az_required, multi_region_required, failover_required, new_vpc_required, existing_network_integration, vpn_required, internal_service_external_exposure, internet_ingress_required, db_required, data_type, consistency_priority, read_write_ratio, initial_data_volume, data_growth_rate, backup_required, db_external_access, created_at, updated_at) VALUES
+    (1, 1, 'AWS', 'ap-northeast-2', 1, 0, 1, 1, 0, 0, 1, 1, 1, 'transactional', 'strong', '8:2', '500GB', '20GB/month', 1, 0, '2026-01-01 00:00:00', '2026-01-01 00:00:00');
+
+    -- ---------------------------------------------------------------
+    -- cost_constraints
+    -- ---------------------------------------------------------------
+    INSERT INTO cost_constraints (id, business_unit_id, monthly_budget, cost_priority, managed_service_scope, spot_instance_allowed, reserved_instance_preferred, auto_scaling_required, cost_alert_threshold, max_compute_instance_count, max_database_instance_count, max_storage_size_gb, created_at, updated_at) VALUES
+    (1, 1, 15000000.00, 'balanced', 'full', 0, 1, 1, 80, 20, 4, 2000, '2026-01-01 00:00:00', '2026-01-01 00:00:00');
+
+    -- ---------------------------------------------------------------
+    -- service_catalogs  (Tier-1 × 3, Tier-2 × 1)
+    -- ---------------------------------------------------------------
+    INSERT INTO service_catalogs (id, business_unit_id, service_name, service_type, description, service_tier, criticality_score, user_target, workload_type, repository_url, environment, external_api_call, external_api_description, container_deployable, created_at, updated_at) VALUES
+    (1, 1, 'Customer Portal Web',      'web',   'T universe 고객 포털 웹 서비스',           '1', 90, 'external', 'web',   'https://github.com/skt/tu-portal',          'production', 0, NULL,                          1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    (2, 1, 'Subscription API',         'api',   'T universe 구독 관리 REST API',             '1', 95, 'external', 'api',   'https://github.com/skt/tu-subscription-api','production', 0, NULL,                          1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    (3, 1, 'AI Chatbot Service',       'ai',    'T universe AI 고객 상담 챗봇',              '1', 85, 'external', 'ai',    'https://github.com/skt/tu-chatbot',         'production', 1, 'LLM API (Claude / GPT)',      1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    (4, 1, 'Billing Settlement Batch', 'batch', '월별 정산 배치 서비스',                     '2', 80, 'internal', 'batch', 'https://github.com/skt/tu-billing-batch',   'production', 0, NULL,                          1, '2026-01-01 00:00:00', '2026-01-01 00:00:00');
+
+    -- ---------------------------------------------------------------
+    -- traffic_profiles
+    -- ---------------------------------------------------------------
+    INSERT INTO traffic_profiles (id, service_catalog_id, expected_avg_rps, expected_peak_rps, expected_max_concurrent_users, expected_peak_write_rate, traffic_pattern, user_geo_distribution, created_at) VALUES
+    (1, 1,  500,  2000,  5000,   50, 'daytime_peak',  'Korea 100%', '2026-01-01 00:00:00'),
+    (2, 2, 1000,  5000, 10000,  500, 'daytime_peak',  'Korea 100%', '2026-01-01 00:00:00'),
+    (3, 3,  300,  1200,  3000,   30, 'daytime_peak',  'Korea 100%', '2026-01-01 00:00:00'),
+    (4, 4,   10,    50,    10,  100, 'batch_nightly', 'Korea 100%', '2026-01-01 00:00:00');
+
+    -- ---------------------------------------------------------------
+    -- alert_rules
+    -- ---------------------------------------------------------------
+    INSERT INTO alert_rules (id, service_catalog_id, rule_name, alert_category, metric_name, operator, threshold, evaluation_window, notification_channel, severity, source, is_active, created_at, updated_at) VALUES
+    -- Customer Portal Web
+    (1,  1, 'Portal 가용성 SLA 위반',          'SLA',   'availability_rate',         '<',  99.90,  '5m',  'slack-ops', 'WARNING',  'prometheus', 1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    (2,  1, 'Portal CPU 과부하',               'INFRA', 'cpu_usage_percent',          '>',  85.00,  '5m',  'slack-ops', 'WARNING',  'prometheus', 1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    -- Subscription API
+    (3,  2, 'Subscription API 가용성 SLA 위반','SLA',   'availability_rate',         '<',  99.95,  '5m',  'slack-ops', 'CRITICAL', 'prometheus', 1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    (4,  2, 'Subscription POST 가용성 SLA 위반','SLA',  'endpoint_availability_rate', '<', 99.99,  '5m',  'slack-ops', 'CRITICAL', 'prometheus', 1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    (5,  2, 'Subscription API 응답지연 SLA',   'SLA',   'latency_p95_ms',             '>',  500.00, '5m',  'slack-ops', 'WARNING',  'prometheus', 1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    (6,  2, 'Subscription API Pod 재시작',     'INFRA', 'pod_restart_count',          '>',    3.00, '10m', 'slack-ops', 'WARNING',  'prometheus', 1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    -- AI Chatbot
+    (7,  3, 'Chatbot 가용성 SLA 위반',         'SLA',   'availability_rate',         '<',  99.90,  '5m',  'slack-ops', 'CRITICAL', 'prometheus', 1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    (8,  3, 'Chatbot ASR SLA 위반',            'SLA',   'answer_success_rate',        '<',  95.00, '10m',  'slack-ops', 'CRITICAL', 'prometheus', 1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    (9,  3, 'Chatbot TTFT SLA 위반',           'SLA',   'ttft_p95_ms',                '>',3000.00,  '5m',  'slack-ops', 'CRITICAL', 'prometheus', 1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    (10, 3, 'Chatbot LLM API 외부 오류율',     'INFRA', 'external_api_error_rate',    '>',  10.00,  '5m',  'slack-ops', 'WARNING',  'prometheus', 1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    -- Billing Batch
+    (11, 4, 'Billing 정확도 SLA 위반',         'SLA',   'correctness_rate',          '<',  99.99,  '1h',  'slack-ops', 'CRITICAL', 'prometheus', 1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    (12, 4, 'Billing 배치 완료 지연',          'SLA',   'batch_completion_hour',      '>',   6.00,  '1h',  'slack-ops', 'WARNING',  'prometheus', 1, '2026-01-01 00:00:00', '2026-01-01 00:00:00');
+
+    -- ---------------------------------------------------------------
+    -- sla_policies
+    -- 월 측정 윈도우: 2026-06 (30일 = 43,200 분)
+    -- ---------------------------------------------------------------
+    INSERT INTO sla_policies (id, service_catalog_id, category, sla_level, operator, target_value, unit, measurement_window, measurement_formula, measurement_point, is_active, created_at, updated_at) VALUES
+    -- Customer Portal Web
+    (1,  1, 'AVAILABILITY',      'SERVICE',  '>=', 99.90, 'percent', 'monthly', 'success_requests / total_requests * 100',  'ingress',              1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    (2,  1, 'LATENCY',           'SERVICE',  '<=', 800.00, 'ms',     'monthly', 'p95(response_time_ms)',                     'ingress',              1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    -- Subscription API
+    (3,  2, 'AVAILABILITY',      'SERVICE',  '>=', 99.95, 'percent', 'monthly', 'success_requests / total_requests * 100',  'ingress',              1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    (4,  2, 'AVAILABILITY',      'ENDPOINT', '>=', 99.99, 'percent', 'monthly', 'success_requests / total_requests * 100',  'POST /subscriptions',  1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    (5,  2, 'LATENCY',           'SERVICE',  '<=', 500.00, 'ms',     'monthly', 'p95(response_time_ms)',                     'ingress',              1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    -- AI Chatbot Service
+    (6,  3, 'AVAILABILITY',      'SERVICE',  '>=', 99.90, 'percent', 'monthly', 'success_requests / total_requests * 100',  'ingress',              1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    (7,  3, 'ANSWER_SUCCESS_RATE','SERVICE', '>=', 95.00, 'percent', 'monthly', 'answered_queries / total_queries * 100',   'application',          1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    (8,  3, 'LATENCY',           'SERVICE',  '<=',3000.00, 'ms',     'monthly', 'p95(ttft_ms)',                              'application',          1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    -- Billing Settlement Batch
+    (9,  4, 'CORRECTNESS',       'SERVICE',  '>=', 99.99, 'percent', 'monthly', 'correct_settlements / total_settlements * 100', 'application',     1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    (10, 4, 'COMPLETION_TIME',   'SERVICE',  '<=',  6.00, 'hour',    'daily',   'batch_completion_hour',                    'application',          1, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    (11, 4, 'AVAILABILITY',      'SERVICE',  '>=', 99.99, 'percent', 'monthly', 'success_requests / total_requests * 100',  'ingress',              1, '2026-01-01 00:00:00', '2026-01-01 00:00:00');
+
+    -- ---------------------------------------------------------------
+    -- error_budgets  (period: 2026-06)
+    --
+    -- 가용성 99.9% → 총 예산 = 0.1% × 43,200 min = 43.2 min
+    -- 가용성 99.95% → 총 예산 = 0.05% × 43,200 = 21.6 min
+    -- 가용성 99.99% → 총 예산 = 0.01% × 43,200 = 4.32 min
+    -- ---------------------------------------------------------------
+    INSERT INTO error_budgets (id, service_catalog_id, sla_policy_id, period_start, period_end, budget_total_value, budget_total_unit, budget_consumed_value, budget_consumed_unit, budget_remaining_percent, last_calculated_at, updated_at) VALUES
+    -- Portal (정상: 72% 잔여)
+    ('a0000001-0001-4000-8000-000000000001', 1, 1, '2026-06-01 00:00:00', '2026-06-30 23:59:59',  43.2000, 'minutes', 12.0960, 'minutes',  72.000, '2026-06-16 14:00:00', '2026-06-16 14:00:00'),
+    ('a0000001-0002-4000-8000-000000000001', 1, 2, '2026-06-01 00:00:00', '2026-06-30 23:59:59',  43.2000, 'minutes',  8.6400, 'minutes',  80.000, '2026-06-16 14:00:00', '2026-06-16 14:00:00'),
+    -- Subscription API (경고: 31% 잔여)
+    ('a0000002-0003-4000-8000-000000000001', 2, 3, '2026-06-01 00:00:00', '2026-06-30 23:59:59',  21.6000, 'minutes', 14.9040, 'minutes',  31.000, '2026-06-16 14:00:00', '2026-06-16 14:00:00'),
+    ('a0000002-0004-4000-8000-000000000001', 2, 4, '2026-06-01 00:00:00', '2026-06-30 23:59:59',   4.3200, 'minutes',  2.7648, 'minutes',  36.000, '2026-06-16 14:00:00', '2026-06-16 14:00:00'),
+    ('a0000002-0005-4000-8000-000000000001', 2, 5, '2026-06-01 00:00:00', '2026-06-30 23:59:59',  43.2000, 'minutes', 19.4400, 'minutes',  55.000, '2026-06-16 14:00:00', '2026-06-16 14:00:00'),
+    -- AI Chatbot (긴급: 18% / 5% / 25% 잔여)
+    ('a0000003-0006-4000-8000-000000000001', 3, 6, '2026-06-01 00:00:00', '2026-06-30 23:59:59',  43.2000, 'minutes', 35.4240, 'minutes',  18.000, '2026-06-16 14:00:00', '2026-06-16 14:00:00'),
+    ('a0000003-0007-4000-8000-000000000001', 3, 7, '2026-06-01 00:00:00', '2026-06-30 23:59:59',  43.2000, 'minutes', 41.0400, 'minutes',   5.000, '2026-06-16 14:00:00', '2026-06-16 14:00:00'),
+    ('a0000003-0008-4000-8000-000000000001', 3, 8, '2026-06-01 00:00:00', '2026-06-30 23:59:59',  43.2000, 'minutes', 32.4000, 'minutes',  25.000, '2026-06-16 14:00:00', '2026-06-16 14:00:00'),
+    -- Billing (정상: 88% 잔여)
+    ('a0000004-0009-4000-8000-000000000001', 4, 9, '2026-06-01 00:00:00', '2026-06-30 23:59:59',  43.2000, 'minutes',  5.1840, 'minutes',  88.000, '2026-06-16 14:00:00', '2026-06-16 14:00:00');
+
+    -- ---------------------------------------------------------------
+    -- burn_rate_status
+    -- Fast Burn 기준: 1h 윈도우에서 14.4× 초과 시 CRITICAL
+    -- ---------------------------------------------------------------
+    INSERT INTO burn_rate_status (id, sla_policy_id, judgment_mode, burn_rate_value, burn_rate_state, short_window, long_window, evaluated_at) VALUES
+    -- Portal: 정상
+    ('b0000001-0001-4000-8000-000000000001', 1,  'COMBINED',   0.82, 'NORMAL',   '1h', '6h', '2026-06-16 14:00:00'),
+    ('b0000001-0002-4000-8000-000000000001', 2,  'COMBINED',   0.61, 'NORMAL',   '1h', '6h', '2026-06-16 14:00:00'),
+    -- Subscription API: 경고 (Slow Burn 초과, Fast Burn 미만)
+    ('b0000002-0003-4000-8000-000000000001', 3,  'SLOW_BURN',  2.31, 'WARNING',  '1h', '6h', '2026-06-16 14:00:00'),
+    ('b0000002-0004-4000-8000-000000000001', 4,  'SLOW_BURN',  1.87, 'WARNING',  '1h', '6h', '2026-06-16 14:00:00'),
+    ('b0000002-0005-4000-8000-000000000001', 5,  'SLOW_BURN',  1.53, 'WARNING',  '1h', '6h', '2026-06-16 14:00:00'),
+    -- AI Chatbot: 긴급 (Fast Burn 초과)
+    ('b0000003-0006-4000-8000-000000000001', 6,  'FAST_BURN',  5.12, 'CRITICAL', '1h', '6h', '2026-06-16 14:00:00'),
+    ('b0000003-0007-4000-8000-000000000001', 7,  'FAST_BURN',  8.73, 'CRITICAL', '1h', '6h', '2026-06-16 14:00:00'),
+    ('b0000003-0008-4000-8000-000000000001', 8,  'FAST_BURN',  4.91, 'CRITICAL', '1h', '6h', '2026-06-16 14:00:00'),
+    -- Billing: 정상
+    ('b0000004-0009-4000-8000-000000000001', 9,  'COMBINED',   0.43, 'NORMAL',   '1h', '6h', '2026-06-16 14:00:00'),
+    ('b0000004-0010-4000-8000-000000000001', 10, 'COMBINED',   0.31, 'NORMAL',   '1h', '6h', '2026-06-16 14:00:00');
+
+    -- ---------------------------------------------------------------
+    -- sli_records  (최근 2시간 데이터 — 시계열 차트용)
+    -- ---------------------------------------------------------------
+    INSERT INTO sli_records (id, service_catalog_id, sla_policy_id, category, sla_level, measured_value, measured_unit, measurement_point, window_start, window_end, sample_count, is_excluded, created_at) VALUES
+    -- AI Chatbot 가용성 (정상 → 급락)
+    ('c0003006-0001-4000-8000-000000000001', 3, 6, 'AVAILABILITY',       'SERVICE', 99.94, 'percent', 'ingress',      '2026-06-16 12:00:00', '2026-06-16 12:05:00', 3840, 0, '2026-06-16 12:05:00'),
+    ('c0003006-0002-4000-8000-000000000001', 3, 6, 'AVAILABILITY',       'SERVICE', 99.91, 'percent', 'ingress',      '2026-06-16 12:15:00', '2026-06-16 12:20:00', 3820, 0, '2026-06-16 12:20:00'),
+    ('c0003006-0003-4000-8000-000000000001', 3, 6, 'AVAILABILITY',       'SERVICE', 99.87, 'percent', 'ingress',      '2026-06-16 12:30:00', '2026-06-16 12:35:00', 3810, 0, '2026-06-16 12:35:00'),
+    ('c0003006-0004-4000-8000-000000000001', 3, 6, 'AVAILABILITY',       'SERVICE', 99.72, 'percent', 'ingress',      '2026-06-16 12:45:00', '2026-06-16 12:50:00', 3750, 0, '2026-06-16 12:50:00'),
+    ('c0003006-0005-4000-8000-000000000001', 3, 6, 'AVAILABILITY',       'SERVICE', 99.43, 'percent', 'ingress',      '2026-06-16 13:00:00', '2026-06-16 13:05:00', 3600, 0, '2026-06-16 13:05:00'),
+    ('c0003006-0006-4000-8000-000000000001', 3, 6, 'AVAILABILITY',       'SERVICE', 98.21, 'percent', 'ingress',      '2026-06-16 13:15:00', '2026-06-16 13:20:00', 3280, 0, '2026-06-16 13:20:00'),
+    ('c0003006-0007-4000-8000-000000000001', 3, 6, 'AVAILABILITY',       'SERVICE', 96.83, 'percent', 'ingress',      '2026-06-16 13:30:00', '2026-06-16 13:35:00', 3050, 0, '2026-06-16 13:35:00'),
+    ('c0003006-0008-4000-8000-000000000001', 3, 6, 'AVAILABILITY',       'SERVICE', 96.12, 'percent', 'ingress',      '2026-06-16 13:45:00', '2026-06-16 13:50:00', 2980, 0, '2026-06-16 13:50:00'),
+    ('c0003006-0009-4000-8000-000000000001', 3, 6, 'AVAILABILITY',       'SERVICE', 95.74, 'percent', 'ingress',      '2026-06-16 14:00:00', '2026-06-16 14:05:00', 2910, 0, '2026-06-16 14:05:00'),
+    -- AI Chatbot ASR (95% 기준 위반)
+    ('c0003007-0001-4000-8000-000000000001', 3, 7, 'ANSWER_SUCCESS_RATE','SERVICE', 96.80, 'percent', 'application',  '2026-06-16 12:00:00', '2026-06-16 12:05:00', 1200, 0, '2026-06-16 12:05:00'),
+    ('c0003007-0002-4000-8000-000000000001', 3, 7, 'ANSWER_SUCCESS_RATE','SERVICE', 96.20, 'percent', 'application',  '2026-06-16 12:15:00', '2026-06-16 12:20:00', 1190, 0, '2026-06-16 12:20:00'),
+    ('c0003007-0003-4000-8000-000000000001', 3, 7, 'ANSWER_SUCCESS_RATE','SERVICE', 95.10, 'percent', 'application',  '2026-06-16 12:30:00', '2026-06-16 12:35:00', 1180, 0, '2026-06-16 12:35:00'),
+    ('c0003007-0004-4000-8000-000000000001', 3, 7, 'ANSWER_SUCCESS_RATE','SERVICE', 92.30, 'percent', 'application',  '2026-06-16 12:45:00', '2026-06-16 12:50:00', 1100, 0, '2026-06-16 12:50:00'),
+    ('c0003007-0005-4000-8000-000000000001', 3, 7, 'ANSWER_SUCCESS_RATE','SERVICE', 86.70, 'percent', 'application',  '2026-06-16 13:00:00', '2026-06-16 13:05:00', 1020, 0, '2026-06-16 13:05:00'),
+    ('c0003007-0006-4000-8000-000000000001', 3, 7, 'ANSWER_SUCCESS_RATE','SERVICE', 74.40, 'percent', 'application',  '2026-06-16 13:15:00', '2026-06-16 13:20:00',  870, 0, '2026-06-16 13:20:00'),
+    ('c0003007-0007-4000-8000-000000000001', 3, 7, 'ANSWER_SUCCESS_RATE','SERVICE', 65.20, 'percent', 'application',  '2026-06-16 13:30:00', '2026-06-16 13:35:00',  760, 0, '2026-06-16 13:35:00'),
+    ('c0003007-0008-4000-8000-000000000001', 3, 7, 'ANSWER_SUCCESS_RATE','SERVICE', 59.80, 'percent', 'application',  '2026-06-16 13:45:00', '2026-06-16 13:50:00',  700, 0, '2026-06-16 13:50:00'),
+    ('c0003007-0009-4000-8000-000000000001', 3, 7, 'ANSWER_SUCCESS_RATE','SERVICE', 58.30, 'percent', 'application',  '2026-06-16 14:00:00', '2026-06-16 14:05:00',  680, 0, '2026-06-16 14:05:00'),
+    -- AI Chatbot TTFT (3000ms 기준 위반)
+    ('c0003008-0001-4000-8000-000000000001', 3, 8, 'LATENCY',            'SERVICE', 1840.00, 'ms',   'application',  '2026-06-16 12:00:00', '2026-06-16 12:05:00', 1200, 0, '2026-06-16 12:05:00'),
+    ('c0003008-0002-4000-8000-000000000001', 3, 8, 'LATENCY',            'SERVICE', 2120.00, 'ms',   'application',  '2026-06-16 12:15:00', '2026-06-16 12:20:00', 1190, 0, '2026-06-16 12:20:00'),
+    ('c0003008-0003-4000-8000-000000000001', 3, 8, 'LATENCY',            'SERVICE', 2680.00, 'ms',   'application',  '2026-06-16 12:30:00', '2026-06-16 12:35:00', 1180, 0, '2026-06-16 12:35:00'),
+    ('c0003008-0004-4000-8000-000000000001', 3, 8, 'LATENCY',            'SERVICE', 3840.00, 'ms',   'application',  '2026-06-16 12:45:00', '2026-06-16 12:50:00', 1100, 0, '2026-06-16 12:50:00'),
+    ('c0003008-0005-4000-8000-000000000001', 3, 8, 'LATENCY',            'SERVICE', 5720.00, 'ms',   'application',  '2026-06-16 13:00:00', '2026-06-16 13:05:00', 1020, 0, '2026-06-16 13:05:00'),
+    ('c0003008-0006-4000-8000-000000000001', 3, 8, 'LATENCY',            'SERVICE', 8130.00, 'ms',   'application',  '2026-06-16 13:15:00', '2026-06-16 13:20:00',  870, 0, '2026-06-16 13:20:00'),
+    ('c0003008-0007-4000-8000-000000000001', 3, 8, 'LATENCY',            'SERVICE',10240.00, 'ms',   'application',  '2026-06-16 13:30:00', '2026-06-16 13:35:00',  760, 0, '2026-06-16 13:35:00'),
+    ('c0003008-0008-4000-8000-000000000001', 3, 8, 'LATENCY',            'SERVICE',11870.00, 'ms',   'application',  '2026-06-16 13:45:00', '2026-06-16 13:50:00',  700, 0, '2026-06-16 13:50:00'),
+    ('c0003008-0009-4000-8000-000000000001', 3, 8, 'LATENCY',            'SERVICE',12400.00, 'ms',   'application',  '2026-06-16 14:00:00', '2026-06-16 14:05:00',  680, 0, '2026-06-16 14:05:00'),
+    -- Subscription API 가용성 (99.95% 기준 접근)
+    ('c0002003-0001-4000-8000-000000000001', 2, 3, 'AVAILABILITY',       'SERVICE', 99.97, 'percent', 'ingress',      '2026-06-16 12:00:00', '2026-06-16 12:05:00', 5000, 0, '2026-06-16 12:05:00'),
+    ('c0002003-0002-4000-8000-000000000001', 2, 3, 'AVAILABILITY',       'SERVICE', 99.97, 'percent', 'ingress',      '2026-06-16 12:30:00', '2026-06-16 12:35:00', 4980, 0, '2026-06-16 12:35:00'),
+    ('c0002003-0003-4000-8000-000000000001', 2, 3, 'AVAILABILITY',       'SERVICE', 99.96, 'percent', 'ingress',      '2026-06-16 13:00:00', '2026-06-16 13:05:00', 4900, 0, '2026-06-16 13:05:00'),
+    ('c0002003-0004-4000-8000-000000000001', 2, 3, 'AVAILABILITY',       'SERVICE', 99.93, 'percent', 'ingress',      '2026-06-16 13:30:00', '2026-06-16 13:35:00', 4820, 0, '2026-06-16 13:35:00'),
+    ('c0002003-0005-4000-8000-000000000001', 2, 3, 'AVAILABILITY',       'SERVICE', 99.88, 'percent', 'ingress',      '2026-06-16 14:00:00', '2026-06-16 14:05:00', 4710, 0, '2026-06-16 14:05:00'),
+    -- Customer Portal (정상)
+    ('c0001001-0001-4000-8000-000000000001', 1, 1, 'AVAILABILITY',       'SERVICE', 99.98, 'percent', 'ingress',      '2026-06-16 12:00:00', '2026-06-16 12:05:00', 2500, 0, '2026-06-16 12:05:00'),
+    ('c0001001-0002-4000-8000-000000000001', 1, 1, 'AVAILABILITY',       'SERVICE', 99.97, 'percent', 'ingress',      '2026-06-16 13:00:00', '2026-06-16 13:05:00', 2490, 0, '2026-06-16 13:05:00'),
+    ('c0001001-0003-4000-8000-000000000001', 1, 1, 'AVAILABILITY',       'SERVICE', 99.98, 'percent', 'ingress',      '2026-06-16 14:00:00', '2026-06-16 14:05:00', 2480, 0, '2026-06-16 14:05:00'),
+    -- Billing Batch (정상 — 오전 배치 완료)
+    ('c0004009-0001-4000-8000-000000000001', 4, 9,  'CORRECTNESS',     'SERVICE', 100.00, 'percent', 'application', '2026-06-16 04:00:00', '2026-06-16 05:30:00', 847, 0, '2026-06-16 05:30:00'),
+    ('c0004010-0001-4000-8000-000000000001', 4, 10, 'COMPLETION_TIME', 'SERVICE',   5.50, 'hour',    'application', '2026-06-16 04:00:00', '2026-06-16 05:30:00',   1, 0, '2026-06-16 05:30:00'),
+    ('c0004011-0001-4000-8000-000000000001', 4, 11, 'AVAILABILITY',    'SERVICE', 100.00, 'percent', 'ingress',     '2026-06-16 04:00:00', '2026-06-16 05:30:00', 847, 0, '2026-06-16 05:30:00');
+
+    -- ---------------------------------------------------------------
+    -- alarm_events
+    -- SLA 연관 (handoff_to_aiops=1) vs 인프라 노이즈 (handoff_to_aiops=0)
+    -- ---------------------------------------------------------------
+    INSERT INTO alarm_events (id, service_catalog_id, alert_rule_id, source, severity, alarm_message, occurred_at, correlation_group_id, status, handoff_to_aiops, created_at) VALUES
+    -- AI Chatbot SLA 알람 → 운영자 노출 O
+    ('d0003007-0001-4000-8000-000000000001', 3,  8, 'prometheus', 'CRITICAL', 'Chatbot Answer Success Rate 86.7% — SLA 95% 위반. Error Budget 잔여 5%. Burn Rate 8.73', '2026-06-16 13:05:00', 'chatbot-inc-20260616-001', 'ACTIVE', 1, '2026-06-16 13:05:00'),
+    ('d0003008-0001-4000-8000-000000000001', 3,  9, 'prometheus', 'CRITICAL', 'Chatbot TTFT p95=8130ms — SLA 3000ms 기준 2.7배 초과. LLM 백엔드 타임아웃 의심',            '2026-06-16 13:06:00', 'chatbot-inc-20260616-001', 'ACTIVE', 1, '2026-06-16 13:06:00'),
+    ('d0003006-0001-4000-8000-000000000001', 3,  7, 'prometheus', 'CRITICAL', 'Chatbot 가용성 98.21% — SLA 99.9% 위반. Error Budget 소진 가속',                            '2026-06-16 13:20:00', 'chatbot-inc-20260616-001', 'ACTIVE', 1, '2026-06-16 13:20:00'),
+    -- AI Chatbot 인프라 노이즈 → 운영자 노출 X (SLA 직접 영향 없음)
+    ('d0003010-0001-4000-8000-000000000001', 3, 10, 'prometheus', 'WARNING',  'Chatbot LLM 외부 API 오류율 23.4% — SLA 직접 영향 없음, 인프라 이벤트로 분류',              '2026-06-16 13:01:00', NULL,                       'CLASSIFIED', 0, '2026-06-16 13:01:00'),
+    -- Subscription API SLA 알람 → 운영자 노출 O
+    ('d0002003-0001-4000-8000-000000000001', 2,  3, 'prometheus', 'WARNING',  'Subscription API 가용성 99.88% — SLA 99.95% 기준 접근. Burn Rate 2.31 (경고)',              '2026-06-16 14:10:00', 'subapi-burnrate-20260616',  'ACTIVE', 1, '2026-06-16 14:10:00'),
+    -- Subscription API 인프라 노이즈 → 운영자 노출 X
+    ('d0002006-0001-4000-8000-000000000001', 2,  6, 'prometheus', 'WARNING',  'Subscription API Pod restart 2회 — SLA 임계값(3회) 미달, 인프라 이벤트로 분류',             '2026-06-16 13:55:00', NULL,                       'CLASSIFIED', 0, '2026-06-16 13:55:00'),
+    -- Customer Portal 인프라 노이즈 → 운영자 노출 X
+    ('d0001002-0001-4000-8000-000000000001', 1,  2, 'prometheus', 'WARNING',  'Portal CPU 87% 순간 급등 — SLA 영향 없음, 인프라 이벤트로 분류',                            '2026-06-16 13:30:00', NULL,                       'CLASSIFIED', 0, '2026-06-16 13:30:00');
+
+    -- ---------------------------------------------------------------
+    -- incidents
+    -- ---------------------------------------------------------------
+    INSERT INTO incidents (id, service_catalog_id, severity, status, title, description, anomaly_score, confidence_score, started_at, resolved_at, created_at) VALUES
+    -- AI Chatbot P1 — 진행 중
+    ('e0003001-2026-4000-8001-000000000001', 3, 'P1', 'OPEN',
+     'AI Chatbot LLM 백엔드 장애 — Answer Success Rate 급락',
+     'LLM 외부 API 타임아웃으로 인한 Chatbot 응답 실패율 급증. TTFT p95 12,400ms, ASR 58.3%로 SLA 전면 위반.',
+     94.30, 97.20, '2026-06-16 13:00:00', NULL, '2026-06-16 13:10:00'),
+    -- Subscription API P2 — 과거 해결됨 (히스토리)
+    ('e0002001-2026-4000-8002-000000000001', 2, 'P2', 'RESOLVED',
+     'Subscription API DB Connection Pool 고갈',
+     'Connection pool 한도(50) 초과로 가용성 저하. Pool 크기 조정 및 Pod 재시작으로 해결.',
+     78.50, 88.40, '2026-06-10 02:15:00', '2026-06-10 03:45:00', '2026-06-10 02:20:00');
+
+    -- ---------------------------------------------------------------
+    -- anomaly_results
+    -- ---------------------------------------------------------------
+    INSERT INTO anomaly_results (id, incident_id, anomaly_type, metric_name, baseline_value, observed_value, anomaly_score, confidence_score, severity, detected_at, status, created_at) VALUES
+    ('f0003001-0001-4000-8000-000000000001', 'e0003001-2026-4000-8001-000000000001', 'SPIKE', 'ttft_p95_ms',          1840.00, 12400.00, 96.80, 98.10, 'CRITICAL', '2026-06-16 13:05:00', 'ACTIVE',   '2026-06-16 13:05:00'),
+    ('f0003001-0002-4000-8000-000000000001', 'e0003001-2026-4000-8001-000000000001', 'DROP',  'answer_success_rate',    96.80,    58.30, 94.30, 97.20, 'CRITICAL', '2026-06-16 13:05:00', 'ACTIVE',   '2026-06-16 13:05:00'),
+    ('f0003001-0003-4000-8000-000000000001', 'e0003001-2026-4000-8001-000000000001', 'SPIKE', 'external_api_error_rate', 1.20,    23.40, 91.50, 95.30, 'CRITICAL', '2026-06-16 13:01:00', 'ACTIVE',   '2026-06-16 13:01:00'),
+    ('f0002001-0001-4000-8000-000000000001', 'e0002001-2026-4000-8002-000000000001', 'SPIKE', 'db_connection_wait_ms',  12.00,  8420.00, 89.20, 91.40, 'HIGH',     '2026-06-10 02:18:00', 'RESOLVED', '2026-06-10 02:18:00');
+
+    -- ---------------------------------------------------------------
+    -- anomaly_evidences
+    -- ---------------------------------------------------------------
+    INSERT INTO anomaly_evidences (id, anomaly_result_id, evidence_type, evidence_key, evidence_value, score, created_at) VALUES
+    (1, 'f0003001-0001-4000-8000-000000000001', 'LOG',    'error_pattern',       'TimeoutError: LLM API response exceeded 10000ms threshold (repeated 147/min)',  0.95, '2026-06-16 13:05:00'),
+    (2, 'f0003001-0001-4000-8000-000000000001', 'METRIC', 'llm_api_latency_p99', '18420ms',                                                                        0.91, '2026-06-16 13:05:00'),
+    (3, 'f0003001-0002-4000-8000-000000000001', 'METRIC', 'failed_query_5m',     '412건',                                                                           0.89, '2026-06-16 13:05:00'),
+    (4, 'f0003001-0003-4000-8000-000000000001', 'LOG',    'upstream_error',       'HTTP 503 from llm-backend-svc: upstream connect error or disconnect',            0.93, '2026-06-16 13:01:00'),
+    (5, 'f0002001-0001-4000-8000-000000000001', 'METRIC', 'db_pool_active',       '50/50 (100% 포화)',                                                              0.88, '2026-06-10 02:18:00');
+
+    -- ---------------------------------------------------------------
+    -- rca_results
+    -- ---------------------------------------------------------------
+    INSERT INTO rca_results (id, incident_id, root_cause_type, root_cause_summary, impact_sli, confidence_score, recommendation, created_at) VALUES
+    (1, 'e0003001-2026-4000-8001-000000000001', 'EXTERNAL_DEPENDENCY',
+     'llm-backend-svc 응답 지연이 10초 임계값 초과 → Chatbot 요청 대부분 타임아웃. 외부 LLM API 공급자 측 장애 추정 (HTTP 503 반복). Circuit Breaker 미설정으로 장애 전파.',
+     'ANSWER_SUCCESS_RATE, LATENCY', 97.20,
+     '1. [즉시/Medium] llm-backend-svc Circuit Breaker 활성화 → 장애 전파 차단\n2. [즉시/Low] Fallback 응답 모드 활성화 → 사전 정의 안내 메시지 반환\n3. [단기/Medium] LLM API 공급자 상태 확인 및 대체 엔드포인트 전환\n4. [장기/High] LLM 공급자 이중화 (Primary/Secondary) 구성',
+     '2026-06-16 13:15:00'),
+    (2, 'e0002001-2026-4000-8002-000000000001', 'RESOURCE_EXHAUSTION',
+     'DB Connection Pool 최대(50) 초과 → 신규 요청 대기 큐 포화. 새벽 배치와 API 트래픽 동시 급증 복합 원인.',
+     'AVAILABILITY', 88.40,
+     '1. DB Connection Pool 크기 100으로 증가\n2. 배치 전용 DB 연결 분리\n3. HikariCP 타임아웃 설정 튜닝',
+     '2026-06-10 03:00:00');
+
+    -- ---------------------------------------------------------------
+    -- rca_evidences
+    -- ---------------------------------------------------------------
+    INSERT INTO rca_evidences (id, rca_result_id, evidence_type, evidence_summary, evidence_score, created_at) VALUES
+    (1, 1, 'LOG',    'llm-backend-svc 로그 HTTP 503 초당 147건 (13:01~14:05 지속)',      0.95, '2026-06-16 13:15:00'),
+    (2, 1, 'METRIC', 'external_api_error_rate 23.4% — 정상 기준 1.2% 대비 19배 상승',   0.93, '2026-06-16 13:15:00'),
+    (3, 1, 'METRIC', 'circuit_breaker_state = CLOSED — 미설정으로 장애 전파 차단 없음',  0.91, '2026-06-16 13:15:00'),
+    (4, 2, 'METRIC', 'db_connection_pool_active = 50/50 (100% 포화 확인)',               0.88, '2026-06-10 03:00:00');
+
+    -- ---------------------------------------------------------------
+    -- action_histories
+    -- HITL 위험 수준:
+    --   Low  → 자동 실행 (actor_type=AI)
+    --   Medium → 운영자 승인 대기 (execution_result=PENDING)
+    --   High → 운영자 승인 + 감사 기록
+    -- ---------------------------------------------------------------
+    INSERT INTO action_histories (id, incident_id, rca_result_id, action_type, actor_type, actor_name, action_summary, execution_result, execution_log, started_at, completed_at, created_at) VALUES
+    -- AI Chatbot: Fallback 모드 활성화 (Low → 자동 실행)
+    (1, 'e0003001-2026-4000-8001-000000000001', 1,
+     'FALLBACK_ACTIVATE', 'AI', 'ZeuX-AIOps',
+     'Chatbot Fallback 응답 모드 자동 활성화. 사용자에게 임시 안내 메시지 반환 시작.',
+     'SUCCESS',
+     'kubectl set env deployment/chatbot-svc FALLBACK_MODE=true → 적용 완료 (13:16:30)',
+     '2026-06-16 13:16:00', '2026-06-16 13:16:30', '2026-06-16 13:16:00'),
+
+    -- AI Chatbot: Circuit Breaker 활성화 (Medium → HITL 승인 대기 중)
+    (2, 'e0003001-2026-4000-8001-000000000001', 1,
+     'CIRCUIT_BREAKER_ENABLE', 'AI', 'ZeuX-AIOps',
+     'llm-backend-svc Circuit Breaker 활성화 요청. 장애 전파 차단 목적. 운영자 승인 필요.',
+     'PENDING',
+     NULL,
+     '2026-06-16 13:18:00', NULL, '2026-06-16 13:18:00'),
+
+    -- Subscription API 과거: Pod Scale Out (Low → 자동 실행)
+    (3, 'e0002001-2026-4000-8002-000000000001', 2,
+     'SCALE_OUT', 'AI', 'ZeuX-AIOps',
+     'Subscription API Pod 수 3 → 6으로 자동 Scale Out.',
+     'SUCCESS',
+     'kubectl scale deployment/subscription-api --replicas=6 → 성공 (02:26:00)',
+     '2026-06-10 02:25:00', '2026-06-10 02:26:00', '2026-06-10 02:25:00'),
+
+    -- Subscription API 과거: DB Pool 조정 (Medium → 운영자 승인 완료)
+    (4, 'e0002001-2026-4000-8002-000000000001', 2,
+     'DB_CONFIG_CHANGE', 'HUMAN', 'ops-engineer-01',
+     'DB Connection Pool 50 → 100 증가. 운영자 검토 및 승인 후 적용.',
+     'SUCCESS',
+     'application.yml spring.datasource.hikari.maximum-pool-size=100 배포 완료 (03:30:00)',
+     '2026-06-10 03:10:00', '2026-06-10 03:30:00', '2026-06-10 03:05:00');
+
+    -- ---------------------------------------------------------------
+    -- bu_registrations  (고객사 에이전트 설치 토큰 — CustomerGuidePage 용)
+    -- ---------------------------------------------------------------
+    INSERT INTO bu_registrations (id, tenant_id, bu_name, service_type, registration_token, created_at, updated_at) VALUES
+    ('00000001-0000-4000-8000-000000000001', 'SKT', 'T universe 사업부', 'java', 'tg-SKT-demo-install-token-tuniverse', '2026-01-01 00:00:00', '2026-01-01 00:00:00');
+
+    SET FOREIGN_KEY_CHECKS = 1;
