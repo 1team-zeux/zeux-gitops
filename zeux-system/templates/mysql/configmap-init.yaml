@@ -14,14 +14,28 @@ data:
     SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
     SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
 
+    -- -----------------------------------------------------
+    -- Schema mydb
+    -- -----------------------------------------------------
+    -- -----------------------------------------------------
+    -- Schema zeux
+    -- -----------------------------------------------------
+
+    -- -----------------------------------------------------
+    -- Schema zeux
+    -- -----------------------------------------------------
     CREATE SCHEMA IF NOT EXISTS `zeux` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci ;
     USE `zeux` ;
 
+    -- -----------------------------------------------------
+    -- Table `zeux`.`customers`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`customers` (
       `id` BIGINT NOT NULL AUTO_INCREMENT,
       `customer_name` VARCHAR(255) NOT NULL,
       `customer_code` VARCHAR(100) NOT NULL,
       `contact_email` VARCHAR(255) NULL DEFAULT NULL,
+      `login_email` VARCHAR(255) NULL DEFAULT NULL,
       `created_at` TIMESTAMP NULL DEFAULT NULL,
       `updated_at` TIMESTAMP NULL DEFAULT NULL,
       PRIMARY KEY (`id`))
@@ -31,6 +45,10 @@ data:
 
     CREATE UNIQUE INDEX `customer_code` ON `zeux`.`customers` (`customer_code` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`business_units`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`business_units` (
       `id` BIGINT NOT NULL AUTO_INCREMENT,
       `customer_id` BIGINT NOT NULL,
@@ -55,6 +73,10 @@ data:
 
     CREATE INDEX `fk_bu_customer` ON `zeux`.`business_units` (`customer_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`service_catalogs`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`service_catalogs` (
       `id` BIGINT NOT NULL AUTO_INCREMENT,
       `business_unit_id` BIGINT NOT NULL,
@@ -82,6 +104,10 @@ data:
 
     CREATE INDEX `fk_service_bu` ON `zeux`.`service_catalogs` (`business_unit_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`incidents`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`incidents` (
       `id` CHAR(36) NOT NULL,
       `service_catalog_id` BIGINT NOT NULL,
@@ -104,6 +130,10 @@ data:
 
     CREATE INDEX `service_catalog_id` ON `zeux`.`incidents` (`service_catalog_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`rca_results`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`rca_results` (
       `id` BIGINT NOT NULL AUTO_INCREMENT,
       `incident_id` CHAR(36) NULL DEFAULT NULL,
@@ -123,6 +153,10 @@ data:
 
     CREATE UNIQUE INDEX `incident_id` ON `zeux`.`rca_results` (`incident_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`action_histories`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`action_histories` (
       `id` BIGINT NOT NULL AUTO_INCREMENT,
       `incident_id` CHAR(36) NULL DEFAULT NULL,
@@ -148,8 +182,13 @@ data:
     COLLATE = utf8mb4_0900_ai_ci;
 
     CREATE INDEX `incident_id` ON `zeux`.`action_histories` (`incident_id` ASC) VISIBLE;
+
     CREATE INDEX `rca_result_id` ON `zeux`.`action_histories` (`rca_result_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`alert_rules`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`alert_rules` (
       `id` BIGINT NOT NULL AUTO_INCREMENT,
       `service_catalog_id` BIGINT NOT NULL,
@@ -175,6 +214,10 @@ data:
 
     CREATE INDEX `service_catalog_id` ON `zeux`.`alert_rules` (`service_catalog_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`alarm_events`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`alarm_events` (
       `id` CHAR(36) NOT NULL,
       `service_catalog_id` BIGINT NOT NULL,
@@ -199,8 +242,13 @@ data:
     COLLATE = utf8mb4_0900_ai_ci;
 
     CREATE INDEX `service_catalog_id` ON `zeux`.`alarm_events` (`service_catalog_id` ASC) VISIBLE;
+
     CREATE INDEX `alert_rule_id` ON `zeux`.`alarm_events` (`alert_rule_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`anomaly_results`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`anomaly_results` (
       `id` CHAR(36) NOT NULL,
       `incident_id` CHAR(36) NULL DEFAULT NULL,
@@ -224,6 +272,10 @@ data:
 
     CREATE INDEX `incident_id` ON `zeux`.`anomaly_results` (`incident_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`anomaly_evidences`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`anomaly_evidences` (
       `id` BIGINT NOT NULL AUTO_INCREMENT,
       `anomaly_result_id` CHAR(36) NOT NULL,
@@ -243,6 +295,10 @@ data:
 
     CREATE INDEX `anomaly_result_id` ON `zeux`.`anomaly_evidences` (`anomaly_result_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`sla_policies`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`sla_policies` (
       `id` BIGINT NOT NULL AUTO_INCREMENT,
       `service_catalog_id` BIGINT NOT NULL,
@@ -270,6 +326,10 @@ data:
 
     CREATE INDEX `service_catalog_id` ON `zeux`.`sla_policies` (`service_catalog_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`burn_rate_status`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`burn_rate_status` (
       `id` CHAR(36) NOT NULL,
       `sla_policy_id` BIGINT NOT NULL,
@@ -289,6 +349,10 @@ data:
 
     CREATE INDEX `sla_policy_id` ON `zeux`.`burn_rate_status` (`sla_policy_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`business_unit_requirements`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`business_unit_requirements` (
       `id` BIGINT NOT NULL AUTO_INCREMENT,
       `business_unit_id` BIGINT NOT NULL,
@@ -322,6 +386,10 @@ data:
 
     CREATE INDEX `business_unit_id` ON `zeux`.`business_unit_requirements` (`business_unit_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`cost_constraints`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`cost_constraints` (
       `id` BIGINT NOT NULL AUTO_INCREMENT,
       `business_unit_id` BIGINT NOT NULL,
@@ -347,6 +415,10 @@ data:
 
     CREATE INDEX `business_unit_id` ON `zeux`.`cost_constraints` (`business_unit_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`topologies`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`topologies` (
       `id` CHAR(36) NOT NULL,
       `business_unit_id` BIGINT NOT NULL,
@@ -370,6 +442,10 @@ data:
 
     CREATE INDEX `business_unit_id` ON `zeux`.`topologies` (`business_unit_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`topology_decisions`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`topology_decisions` (
       `id` BIGINT NOT NULL AUTO_INCREMENT,
       `topology_id` CHAR(36) NOT NULL,
@@ -389,6 +465,10 @@ data:
 
     CREATE INDEX `topology_id` ON `zeux`.`topology_decisions` (`topology_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`decision_inputs`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`decision_inputs` (
       `id` BIGINT NOT NULL AUTO_INCREMENT,
       `topology_decision_id` BIGINT NOT NULL,
@@ -406,6 +486,10 @@ data:
 
     CREATE INDEX `topology_decision_id` ON `zeux`.`decision_inputs` (`topology_decision_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`error_budgets`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`error_budgets` (
       `id` CHAR(36) NOT NULL,
       `service_catalog_id` BIGINT NOT NULL,
@@ -431,8 +515,13 @@ data:
     COLLATE = utf8mb4_0900_ai_ci;
 
     CREATE INDEX `service_catalog_id` ON `zeux`.`error_budgets` (`service_catalog_id` ASC) VISIBLE;
+
     CREATE INDEX `sla_policy_id` ON `zeux`.`error_budgets` (`sla_policy_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`resources`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`resources` (
       `id` CHAR(36) NOT NULL,
       `service_catalog_id` BIGINT NOT NULL,
@@ -458,9 +547,15 @@ data:
     COLLATE = utf8mb4_0900_ai_ci;
 
     CREATE UNIQUE INDEX `physical_id` ON `zeux`.`resources` (`physical_id` ASC) VISIBLE;
+
     CREATE INDEX `service_catalog_id` ON `zeux`.`resources` (`service_catalog_id` ASC) VISIBLE;
+
     CREATE INDEX `topology_decision_id` ON `zeux`.`resources` (`topology_decision_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`rca_affected_resources`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`rca_affected_resources` (
       `id` BIGINT NOT NULL AUTO_INCREMENT,
       `rca_result_id` BIGINT NOT NULL,
@@ -479,8 +574,13 @@ data:
     COLLATE = utf8mb4_0900_ai_ci;
 
     CREATE INDEX `rca_result_id` ON `zeux`.`rca_affected_resources` (`rca_result_id` ASC) VISIBLE;
+
     CREATE INDEX `resource_id` ON `zeux`.`rca_affected_resources` (`resource_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`rca_evidences`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`rca_evidences` (
       `id` BIGINT NOT NULL AUTO_INCREMENT,
       `rca_result_id` BIGINT NOT NULL,
@@ -498,6 +598,10 @@ data:
 
     CREATE INDEX `rca_result_id` ON `zeux`.`rca_evidences` (`rca_result_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`resource_dependencies`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`resource_dependencies` (
       `id` BIGINT NOT NULL AUTO_INCREMENT,
       `source_resource_id` CHAR(36) NULL DEFAULT NULL,
@@ -516,8 +620,13 @@ data:
     COLLATE = utf8mb4_0900_ai_ci;
 
     CREATE INDEX `source_resource_id` ON `zeux`.`resource_dependencies` (`source_resource_id` ASC) VISIBLE;
+
     CREATE INDEX `target_resource_id` ON `zeux`.`resource_dependencies` (`target_resource_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`service_dependencies`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`service_dependencies` (
       `id` BIGINT NOT NULL AUTO_INCREMENT,
       `source_service_id` BIGINT NOT NULL,
@@ -537,8 +646,13 @@ data:
     COLLATE = utf8mb4_0900_ai_ci;
 
     CREATE INDEX `source_service_id` ON `zeux`.`service_dependencies` (`source_service_id` ASC) VISIBLE;
+
     CREATE INDEX `target_service_id` ON `zeux`.`service_dependencies` (`target_service_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`sli_records`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`sli_records` (
       `id` CHAR(36) NOT NULL,
       `service_catalog_id` BIGINT NOT NULL,
@@ -565,8 +679,13 @@ data:
     COLLATE = utf8mb4_0900_ai_ci;
 
     CREATE INDEX `service_catalog_id` ON `zeux`.`sli_records` (`service_catalog_id` ASC) VISIBLE;
+
     CREATE INDEX `sla_policy_id` ON `zeux`.`sli_records` (`sla_policy_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`terraform_artifacts`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`terraform_artifacts` (
       `id` BIGINT NOT NULL AUTO_INCREMENT,
       `topology_id` CHAR(36) NOT NULL,
@@ -590,6 +709,10 @@ data:
 
     CREATE INDEX `topology_id` ON `zeux`.`terraform_artifacts` (`topology_id` ASC) VISIBLE;
 
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`traffic_profiles`
+    -- -----------------------------------------------------
     CREATE TABLE IF NOT EXISTS `zeux`.`traffic_profiles` (
       `id` BIGINT NOT NULL AUTO_INCREMENT,
       `service_catalog_id` BIGINT NOT NULL,
@@ -609,6 +732,299 @@ data:
     COLLATE = utf8mb4_0900_ai_ci;
 
     CREATE INDEX `fk_tp_service` ON `zeux`.`traffic_profiles` (`service_catalog_id` ASC) VISIBLE;
+
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`bu_registrations`
+    -- -----------------------------------------------------
+    CREATE TABLE IF NOT EXISTS `zeux`.`bu_registrations` (
+      `id` VARCHAR(36) NOT NULL,
+      `tenant_id` VARCHAR(100) NOT NULL,
+      `bu_name` VARCHAR(255) NOT NULL,
+      `application_name` VARCHAR(255) NULL DEFAULT NULL,
+      `business_domain` VARCHAR(50) NULL DEFAULT NULL,
+      `subscription_tier` VARCHAR(50) NULL DEFAULT NULL,
+      `infra_type` VARCHAR(50) NULL DEFAULT 'VM',
+      `service_type` VARCHAR(20) NULL DEFAULT 'java',
+      `sla_latency_ms` INT NULL DEFAULT 500,
+      `registration_token` VARCHAR(128) NOT NULL,
+      `created_at` DATETIME NULL DEFAULT NULL,
+      `updated_at` DATETIME NULL DEFAULT NULL,
+      PRIMARY KEY (`id`),
+      UNIQUE INDEX `registration_token` (`registration_token` ASC))
+    ENGINE = InnoDB
+    DEFAULT CHARACTER SET = utf8mb4
+    COLLATE = utf8mb4_0900_ai_ci;
+
+    CREATE INDEX `idx_bu_registrations_tenant_id` ON `zeux`.`bu_registrations` (`tenant_id` ASC) VISIBLE;
+
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`change_requests`
+    -- -----------------------------------------------------
+    CREATE TABLE IF NOT EXISTS `zeux`.`change_requests` (
+      `id` VARCHAR(36) NOT NULL,
+      `session_id` VARCHAR(36) NOT NULL,
+      `tenant_id` VARCHAR(100) NOT NULL,
+      `resource_type` VARCHAR(10) NOT NULL,
+      `status` VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+      `branch_name` VARCHAR(200) NULL DEFAULT NULL,
+      `pr_number` INT NULL DEFAULT NULL,
+      `pr_url` VARCHAR(500) NULL DEFAULT NULL,
+      `pr_comment_id` BIGINT NULL DEFAULT NULL,
+      `plan_output` TEXT NULL DEFAULT NULL,
+      `applied_at` DATETIME NULL DEFAULT NULL,
+      `alb_dns_name` VARCHAR(500) NULL DEFAULT NULL,
+      `ec2_instance_id` VARCHAR(50) NULL DEFAULT NULL,
+      `ec2_private_ip` VARCHAR(50) NULL DEFAULT NULL,
+      `fix_attempt_count` INT NULL DEFAULT 0,
+      `destroy_status` VARCHAR(20) NULL DEFAULT NULL,
+      `terraform_state_path` VARCHAR(500) NULL DEFAULT NULL,
+      `destroy_at` DATETIME NULL DEFAULT NULL,
+      `created_at` DATETIME NULL DEFAULT NULL,
+      `updated_at` DATETIME NULL DEFAULT NULL,
+      PRIMARY KEY (`id`))
+    ENGINE = InnoDB
+    DEFAULT CHARACTER SET = utf8mb4
+    COLLATE = utf8mb4_0900_ai_ci;
+
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`sla_sessions`
+    -- -----------------------------------------------------
+    CREATE TABLE IF NOT EXISTS `zeux`.`sla_sessions` (
+      `id` VARCHAR(36) NOT NULL,
+      `tenant_id` VARCHAR(100) NOT NULL,
+      `resource_type` VARCHAR(10) NULL DEFAULT NULL,
+      `sla_raw` TEXT NULL DEFAULT NULL,
+      `status` VARCHAR(30) NOT NULL DEFAULT 'ANALYZING',
+      `service_catalog_json` TEXT NULL DEFAULT NULL,
+      `architecture_summary` TEXT NULL DEFAULT NULL,
+      `availability_target` FLOAT NULL DEFAULT NULL,
+      `latency_p99_ms` INT NULL DEFAULT NULL,
+      `error_rate_percent` FLOAT NULL DEFAULT NULL,
+      `change_request_id` VARCHAR(36) NULL DEFAULT NULL,
+      `created_at` DATETIME NULL DEFAULT NULL,
+      `updated_at` DATETIME NULL DEFAULT NULL,
+      PRIMARY KEY (`id`))
+    ENGINE = InnoDB
+    DEFAULT CHARACTER SET = utf8mb4
+    COLLATE = utf8mb4_0900_ai_ci;
+
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`monitoring_policies`
+    -- -----------------------------------------------------
+    CREATE TABLE IF NOT EXISTS `zeux`.`monitoring_policies` (
+      `id` VARCHAR(36) NOT NULL,
+      `session_id` VARCHAR(36) NOT NULL,
+      `service_name` VARCHAR(200) NULL DEFAULT NULL,
+      `availability_target` FLOAT NOT NULL,
+      `latency_p99_ms` INT NOT NULL,
+      `error_rate_percent` FLOAT NOT NULL,
+      `rto_minutes` INT NULL DEFAULT NULL,
+      `alert_rules_yaml` TEXT NULL DEFAULT NULL,
+      `dashboard_json` TEXT NULL DEFAULT NULL,
+      `prometheus_synced` TINYINT(1) NOT NULL DEFAULT 0,
+      `created_at` DATETIME NULL DEFAULT NULL,
+      PRIMARY KEY (`id`))
+    ENGINE = InnoDB
+    DEFAULT CHARACTER SET = utf8mb4
+    COLLATE = utf8mb4_0900_ai_ci;
+
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`tenant_configs`
+    -- -----------------------------------------------------
+    CREATE TABLE IF NOT EXISTS `zeux`.`tenant_configs` (
+      `id` VARCHAR(36) NOT NULL,
+      `tenant_id` VARCHAR(100) NOT NULL,
+      `aws_region` VARCHAR(50) NOT NULL DEFAULT 'ap-northeast-2',
+      `aws_access_key_id` VARCHAR(128) NULL DEFAULT NULL,
+      `aws_secret_access_key` VARCHAR(512) NULL DEFAULT NULL,
+      `db_password` VARCHAR(256) NULL DEFAULT NULL,
+      `execution_role_arn` VARCHAR(500) NULL DEFAULT NULL,
+      `created_at` DATETIME NULL DEFAULT NULL,
+      PRIMARY KEY (`id`),
+      UNIQUE INDEX `tenant_id` (`tenant_id` ASC))
+    ENGINE = InnoDB
+    DEFAULT CHARACTER SET = utf8mb4
+    COLLATE = utf8mb4_0900_ai_ci;
+
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`discovered_hosts`
+    -- -----------------------------------------------------
+    CREATE TABLE IF NOT EXISTS `zeux`.`discovered_hosts` (
+      `id` BIGINT NOT NULL AUTO_INCREMENT,
+      `tenant_id` VARCHAR(100) NOT NULL,
+      `hostname` VARCHAR(255) NULL DEFAULT NULL,
+      `os` VARCHAR(50) NULL DEFAULT NULL,
+      `arch` VARCHAR(20) NULL DEFAULT NULL,
+      `node_exporter_port` INT NULL DEFAULT NULL,
+      `cadvisor_port` INT NULL DEFAULT NULL,
+      `first_seen` DATETIME NULL DEFAULT NULL,
+      `last_seen` DATETIME NULL DEFAULT NULL,
+      PRIMARY KEY (`id`))
+    ENGINE = InnoDB
+    DEFAULT CHARACTER SET = utf8mb4
+    COLLATE = utf8mb4_0900_ai_ci;
+
+    CREATE INDEX `idx_discovered_hosts_tenant_id` ON `zeux`.`discovered_hosts` (`tenant_id` ASC) VISIBLE;
+
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`discovered_containers`
+    -- -----------------------------------------------------
+    CREATE TABLE IF NOT EXISTS `zeux`.`discovered_containers` (
+      `id` BIGINT NOT NULL AUTO_INCREMENT,
+      `host_id` BIGINT NOT NULL,
+      `tenant_id` VARCHAR(100) NOT NULL,
+      `container_name` VARCHAR(255) NULL DEFAULT NULL,
+      `image` VARCHAR(500) NULL DEFAULT NULL,
+      `ports` VARCHAR(500) NULL DEFAULT NULL,
+      `first_seen` DATETIME NULL DEFAULT NULL,
+      `last_seen` DATETIME NULL DEFAULT NULL,
+      PRIMARY KEY (`id`),
+      CONSTRAINT `fk_container_host`
+        FOREIGN KEY (`host_id`)
+        REFERENCES `zeux`.`discovered_hosts` (`id`))
+    ENGINE = InnoDB
+    DEFAULT CHARACTER SET = utf8mb4
+    COLLATE = utf8mb4_0900_ai_ci;
+
+    CREATE INDEX `idx_discovered_containers_host_id` ON `zeux`.`discovered_containers` (`host_id` ASC) VISIBLE;
+    CREATE INDEX `idx_discovered_containers_tenant_id` ON `zeux`.`discovered_containers` (`tenant_id` ASC) VISIBLE;
+
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`upload_sessions`
+    -- -----------------------------------------------------
+    CREATE TABLE IF NOT EXISTS `zeux`.`upload_sessions` (
+      `id` VARCHAR(36) NOT NULL,
+      `sla_document_path` TEXT NOT NULL,
+      `infra_document_path` TEXT NOT NULL,
+      `status` VARCHAR(40) NOT NULL DEFAULT 'UPLOADED',
+      `draft_id` VARCHAR(36) NULL DEFAULT NULL,
+      `created_at` DATETIME NULL DEFAULT NULL,
+      `updated_at` DATETIME NULL DEFAULT NULL,
+      PRIMARY KEY (`id`))
+    ENGINE = InnoDB
+    DEFAULT CHARACTER SET = utf8mb4
+    COLLATE = utf8mb4_0900_ai_ci;
+
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`service_bundle_drafts`
+    -- -----------------------------------------------------
+    CREATE TABLE IF NOT EXISTS `zeux`.`service_bundle_drafts` (
+      `id` VARCHAR(36) NOT NULL,
+      `upload_session_id` VARCHAR(36) NOT NULL,
+      `status` VARCHAR(40) NOT NULL DEFAULT 'draft',
+      `public_draft_json` MEDIUMTEXT NOT NULL,
+      `state_json` MEDIUMTEXT NOT NULL,
+      `bindings_json` MEDIUMTEXT NOT NULL,
+      `created_at` DATETIME NULL DEFAULT NULL,
+      `updated_at` DATETIME NULL DEFAULT NULL,
+      PRIMARY KEY (`id`),
+      UNIQUE INDEX `upload_session_id` (`upload_session_id` ASC))
+    ENGINE = InnoDB
+    DEFAULT CHARACTER SET = utf8mb4
+    COLLATE = utf8mb4_0900_ai_ci;
+
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`service_bundles`
+    -- -----------------------------------------------------
+    CREATE TABLE IF NOT EXISTS `zeux`.`service_bundles` (
+      `bundle_id` VARCHAR(60) NOT NULL,
+      `workflow_id` VARCHAR(36) NOT NULL,
+      `upload_session_id` VARCHAR(36) NULL DEFAULT NULL,
+      `draft_id` VARCHAR(36) NULL DEFAULT NULL,
+      `version` VARCHAR(20) NOT NULL DEFAULT 'v1',
+      `status` VARCHAR(40) NOT NULL DEFAULT 'saved',
+      `customer_id` VARCHAR(100) NULL DEFAULT NULL,
+      `service_id` VARCHAR(100) NULL DEFAULT NULL,
+      `operator_id` VARCHAR(100) NOT NULL DEFAULT 'system',
+      `bundle_json` MEDIUMTEXT NOT NULL,
+      `created_at` DATETIME NULL DEFAULT NULL,
+      `approved_at` DATETIME NULL DEFAULT NULL,
+      `updated_at` DATETIME NULL DEFAULT NULL,
+      PRIMARY KEY (`bundle_id`))
+    ENGINE = InnoDB
+    DEFAULT CHARACTER SET = utf8mb4
+    COLLATE = utf8mb4_0900_ai_ci;
+
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`sla_impact_assessments`
+    -- -----------------------------------------------------
+    CREATE TABLE IF NOT EXISTS `zeux`.`sla_impact_assessments` (
+      `id` VARCHAR(36) NOT NULL,
+      `incident_id` VARCHAR(36) NULL DEFAULT NULL,
+      `correlation_group_id` VARCHAR(100) NULL DEFAULT NULL,
+      `assessment_stage` VARCHAR(20) NULL DEFAULT NULL,
+      `triage_priority` VARCHAR(20) NULL DEFAULT NULL,
+      `triage_latency_ms` INT NULL DEFAULT NULL,
+      `budget_remaining_pct` DECIMAL(10,2) NULL DEFAULT NULL,
+      `burn_rate_state` VARCHAR(20) NULL DEFAULT NULL,
+      `burn_rate_value` DECIMAL(10,2) NULL DEFAULT NULL,
+      `estimated_violation_minutes` DECIMAL(10,2) NULL DEFAULT NULL,
+      `top_cause_hypothesis` VARCHAR(100) NULL DEFAULT NULL,
+      `hypothesis_confidence` DECIMAL(10,2) NULL DEFAULT NULL,
+      `hypothesis_basis` VARCHAR(255) NULL DEFAULT NULL,
+      `user_impact_estimate` VARCHAR(500) NULL DEFAULT NULL,
+      `situation_text` TEXT NULL DEFAULT NULL,
+      `prometheus_snapshot` JSON NULL DEFAULT NULL,
+      `infra_status` JSON NULL DEFAULT NULL,
+      `vector_hints` JSON NULL DEFAULT NULL,
+      `triggered_alarms` JSON NULL DEFAULT NULL,
+      `node_errors` JSON NULL DEFAULT NULL,
+      `handoff_to_rca` TINYINT(1) NULL DEFAULT NULL,
+      `created_at` DATETIME NULL DEFAULT NULL,
+      PRIMARY KEY (`id`))
+    ENGINE = InnoDB
+    DEFAULT CHARACTER SET = utf8mb4
+    COLLATE = utf8mb4_0900_ai_ci;
+
+
+    -- -----------------------------------------------------
+    -- Table `zeux`.`finops_runs`
+    -- -----------------------------------------------------
+    CREATE TABLE IF NOT EXISTS `zeux`.`finops_runs` (
+      `id` VARCHAR(36) NOT NULL,
+      `run_id` VARCHAR(36) NOT NULL,
+      `batch_id` VARCHAR(36) NOT NULL,
+      `tenant_id` VARCHAR(100) NOT NULL,
+      `team_id` VARCHAR(100) NOT NULL,
+      `service_id` VARCHAR(200) NOT NULL,
+      `service_name` VARCHAR(200) NULL DEFAULT NULL,
+      `schedule_window` VARCHAR(64) NOT NULL,
+      `status` VARCHAR(32) NOT NULL DEFAULT 'QUEUED',
+      `started_at` DATETIME NULL DEFAULT NULL,
+      `finished_at` DATETIME NULL DEFAULT NULL,
+      `report_artifact_uri` TEXT NULL DEFAULT NULL,
+      `findings_count` INT NOT NULL DEFAULT 0,
+      `eligible_count` INT NOT NULL DEFAULT 0,
+      `error_message` TEXT NULL DEFAULT NULL,
+      `approval_status` VARCHAR(32) NULL DEFAULT NULL,
+      `approval_reviewer` VARCHAR(200) NULL DEFAULT NULL,
+      `approval_comment` TEXT NULL DEFAULT NULL,
+      `approval_reviewed_at` DATETIME NULL DEFAULT NULL,
+      `findings_snapshot_json` TEXT NULL DEFAULT NULL,
+      `data_quality_json` TEXT NULL DEFAULT NULL,
+      `created_at` DATETIME NULL DEFAULT NULL,
+      PRIMARY KEY (`id`),
+      UNIQUE INDEX `uq_finops_runs_tenant_service_window` (`tenant_id` ASC, `service_id` ASC, `schedule_window` ASC))
+    ENGINE = InnoDB
+    DEFAULT CHARACTER SET = utf8mb4
+    COLLATE = utf8mb4_0900_ai_ci;
+
+    CREATE INDEX `idx_finops_runs_run_id` ON `zeux`.`finops_runs` (`run_id` ASC) VISIBLE;
+    CREATE INDEX `idx_finops_runs_batch_id` ON `zeux`.`finops_runs` (`batch_id` ASC) VISIBLE;
+    CREATE INDEX `idx_finops_runs_tenant_id` ON `zeux`.`finops_runs` (`tenant_id` ASC) VISIBLE;
+    CREATE INDEX `idx_finops_runs_service_id` ON `zeux`.`finops_runs` (`service_id` ASC) VISIBLE;
+
 
     SET SQL_MODE=@OLD_SQL_MODE;
     SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
