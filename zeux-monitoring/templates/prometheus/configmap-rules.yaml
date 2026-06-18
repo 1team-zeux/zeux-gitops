@@ -1,0 +1,307 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  # EKS Prometheus SLO recording rules + alert rules — static rules 마운트
+  name: prometheus-rules
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: prometheus
+data:
+  slo-recording.yml: |
+    # SLO Recording Rules — Prometheus가 지속적으로 계산하는 집계 시계열
+    # slo-engine은 이 recording rule 결과를 읽어 DB에 저장
+    # tenant_id / service_name 라벨이 OTel Gateway에서 주입된 값
+
+    groups:
+      - name: slo_recording
+        interval: 1m
+        rules:
+
+          # ── 가용성 (5분 윈도우) ──────────────────────────────────────────────
+          # 5xx 제외한 성공 요청 비율
+          - record: slo:availability:rate5m
+            expr: |
+              sum by (tenant_id, service_name) (
+                rate(http_requests_total{status!~"5.."}[5m])
+              )
+              /
+              sum by (tenant_id, service_name) (
+                rate(http_requests_total[5m])
+              )
+
+          # 30일 가용성 (에러 버짓 잔여량 계산 기준)
+          - record: slo:availability:rate30d
+            expr: |
+              sum by (tenant_id, service_name) (
+                rate(http_requests_total{status!~"5.."}[30d])
+              )
+              /
+              sum by (tenant_id, service_name) (
+                rate(http_requests_total[30d])
+              )
+
+          # ── P99 레이턴시 ─────────────────────────────────────────────────────
+          - record: slo:latency_p99:rate5m
+            expr: |
+              histogram_quantile(0.99,
+                sum by (tenant_id, service_name, le) (
+                  rate(http_request_duration_seconds_bucket[5m])
+                )
+              )
+
+          # ── 에러율 (5분) ─────────────────────────────────────────────────────
+          - record: slo:error_rate:rate5m
+            expr: |
+              sum by (tenant_id, service_name) (
+                rate(http_requests_total{status=~"5.."}[5m])
+              )
+              /
+              sum by (tenant_id, service_name) (
+                rate(http_requests_total[5m])
+              )
+
+          # ── 에러 버짓 비율 (Error Budget Ratio) ─────────────────────────────
+          # slo_target_availability 있으면 서비스별 동적 값 (gen_observability가 주입)
+          # 없으면 현재 서비스의 availability 시계열에서 label을 복사해 0.001 기본값 부여.
+          # vector(0.999) 방식은 label이 없어 on(tenant_id,service_name) join 실패하므로
+          # group by로 label을 보존한 뒤 0.001 상수를 더하는 방식으로 fallback 구현.
+          - record: slo:error_budget_ratio
+            expr: |
+              (1 - slo_target_availability)
+              or
+              (
+                group by (tenant_id, service_name) (slo:availability:rate5m) * 0 + 0.001
+              )
+
+          # ── 레이턴시 임계값 recording rule ──────────────────────────────────
+          # slo_target_latency_seconds 있으면 서비스별 동적 값, 없으면 0.5초 기본
+          - record: slo:latency_target_seconds
+            expr: |
+              slo_target_latency_seconds
+              or
+              (
+                group by (tenant_id, service_name) (slo:latency_p99:rate5m) * 0 + 0.5
+              )
+
+          # ── Burn Rate (에러 버짓 소진 속도) ─────────────────────────────────
+          # burn rate > 1 = 에러 버짓 소진 중, > 14.4 = Fast Burn (1시간 내 소진 위험)
+
+          # 5분 윈도우 burn rate (99.9% SLA 기준 error_budget = 0.001 고정)
+          - record: slo:error_budget_burn_rate:rate5m
+            expr: slo:error_rate:rate5m / slo:error_budget_ratio
+
+          # 1시간 윈도우 burn rate
+          - record: slo:error_budget_burn_rate:rate1h
+            expr: |
+              (
+                sum by (tenant_id, service_name) (
+                  rate(http_requests_total{status=~"5.."}[1h])
+                )
+                /
+                sum by (tenant_id, service_name) (
+                  rate(http_requests_total[1h])
+                )
+              )
+              / slo:error_budget_ratio
+
+          # 6시간 윈도우 burn rate (느린 소진 감지)
+          - record: slo:error_budget_burn_rate:rate6h
+            expr: |
+              (
+                sum by (tenant_id, service_name) (
+                  rate(http_requests_total{status=~"5.."}[6h])
+                )
+                /
+                sum by (tenant_id, service_name) (
+                  rate(http_requests_total[6h])
+                )
+              )
+              / slo:error_budget_ratio
+
+          # ── 노드 자원 (Node Exporter) ────────────────────────────────────────
+          # CPU 사용률 (%)
+          - record: node:cpu_utilization:rate5m
+            expr: |
+              100 - (
+                avg by (tenant_id, service_name, instance) (
+                  rate(node_cpu_seconds_total{mode="idle"}[5m])
+                ) * 100
+              )
+
+          # 메모리 사용률 (%)
+          - record: node:memory_utilization:current
+            expr: |
+              (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100
+
+          # ai-chatbot: chat 성공율 → slo:availability:rate5m (http_requests_total 없음)
+          - record: slo:availability:rate5m
+            expr: |
+              sum by (tenant_id, service_name) (
+                rate(chat_requests_total{status="success",service_name="ai-chatbot-service"}[5m])
+              )
+              /
+              (
+                sum by (tenant_id, service_name) (
+                  rate(chat_requests_total{service_name="ai-chatbot-service"}[5m])
+                ) > 0
+              )
+
+          # billing-batch: 정확도율 SLI
+          - record: slo:correctness:current
+            expr: batch_correctness_rate{service_name="billing-settlement-batch"} / 100
+
+          # billing-batch: 배치 실행 여부 (1=실행중)
+          - record: billing_batch:is_running:current
+            expr: batch_job_status{service_name="billing-settlement-batch"}
+
+          # billing-batch: CPU 사용률 (Demo 1 대시보드용)
+          - record: billing_batch:cpu:current
+            expr: cpu_usage_percent{service_name="billing-settlement-batch"}
+
+          # ── Bridge: monitoring_router.py 쿼리 → 실서비스 메트릭 매핑 ─────────
+          # simulator 시절 게이지명을 그대로 유지해 router 코드 변경 불필요
+
+          # P95 레이턴시 ms — http_request_duration_seconds histogram에서 계산
+          - record: http_request_duration_p95_ms
+            expr: |
+              histogram_quantile(0.95,
+                sum by (tenant_id, service_name, le) (
+                  rate(http_request_duration_seconds_bucket[5m])
+                )
+              ) * 1000
+
+          # 에러율 % — slo:error_rate:rate5m (http_requests_total 기반) × 100
+          - record: http_error_rate_percent
+            expr: slo:error_rate:rate5m * 100
+
+          # ai-chatbot: 답변 성공률 (answer_success_rate_gauge → chatbot_answer_success_rate)
+          - record: chatbot_answer_success_rate
+            expr: answer_success_rate_gauge
+
+          # ai-chatbot: TTFT P95ms — chat_response_duration_seconds histogram 대리 지표
+          - record: chatbot_ttft_p95_ms
+            expr: |
+              histogram_quantile(0.95,
+                sum by (tenant_id, service_name, le) (
+                  rate(chat_response_duration_seconds_bucket[5m])
+                )
+              ) * 1000
+
+  slo-alerts.yml: |
+    # SLO Alert Rules — Burn Rate 기반 Multi-Window 조건
+    # 두 윈도우 조건이 동시에 만족해야만 Alert firing → 오탐 최소화
+    # Alertmanager가 webhook으로 slo-engine에 전달 (Sprint 4)
+
+    groups:
+      - name: slo_burn_rate_alerts
+        rules:
+
+          # ── Fast Burn (긴급) — 1시간 내 에러 버짓 소진 위험 ─────────────────
+          # 5분 burn rate > 14.4 AND 1시간 burn rate > 6
+          # 즉시 대응 필요 (P1)
+          - alert: SLOFastBurn
+            expr: |
+              slo:error_budget_burn_rate:rate5m > 14.4
+              and
+              slo:error_budget_burn_rate:rate1h > 6
+            for: 2m
+            labels:
+              severity: critical
+              alert_class: burn_rate
+            annotations:
+              summary: "{{ "{{" }} $labels.tenant_id {{ "}}" }} / {{ "{{" }} $labels.service_name {{ "}}" }}: 에러 버짓 빠른 소진"
+              description: "5m burn rate {{ "{{" }} $value | humanize {{ "}}" }}x — 에러 버짓 1시간 내 소진 위험"
+              runbook: "에러 로그 즉시 확인, 서킷브레이커 고려"
+
+          # ── Slow Burn (경고) — 6시간 내 에러 버짓 소진 위험 ─────────────────
+          # 1시간 burn rate > 3 AND 6시간 burn rate > 1
+          # 점검 필요 (P2)
+          - alert: SLOSlowBurn
+            expr: |
+              slo:error_budget_burn_rate:rate1h > 3
+              and
+              slo:error_budget_burn_rate:rate6h > 1
+            for: 15m
+            labels:
+              severity: warning
+              alert_class: burn_rate
+            annotations:
+              summary: "{{ "{{" }} $labels.tenant_id {{ "}}" }} / {{ "{{" }} $labels.service_name {{ "}}" }}: 에러 버짓 서서히 소진"
+              description: "1h burn rate {{ "{{" }} $value | humanize {{ "}}" }}x — 점검 권장"
+
+          # ── Latency P99 초과 ────────────────────────────────────────────────
+          # slo:latency_target_seconds recording rule 사용 (slo-recording.yml에서 계산)
+          # slo_target_latency_seconds 있으면 서비스별 동적 임계값, 없으면 0.5초 기본값
+          - alert: SLOHighLatencyP99
+            expr: |
+              slo:latency_p99:rate5m
+              >
+              on(tenant_id, service_name) group_left()
+              slo:latency_target_seconds
+            for: 5m
+            labels:
+              severity: warning
+              alert_class: latency
+            annotations:
+              summary: "{{ "{{" }} $labels.tenant_id {{ "}}" }} / {{ "{{" }} $labels.service_name {{ "}}" }}: P99 레이턴시 SLO 초과"
+              description: "P99 = {{ "{{" }} $value | humanizeDuration {{ "}}" }}"
+
+          # ── 노드 CPU 과부하 ─────────────────────────────────────────────────
+          - alert: NodeHighCPU
+            expr: node:cpu_utilization:rate5m > 80
+            for: 10m
+            labels:
+              severity: warning
+              alert_class: resource
+            annotations:
+              summary: "{{ "{{" }} $labels.tenant_id {{ "}}" }} / {{ "{{" }} $labels.service_name {{ "}}" }}: CPU {{ "{{" }} $value | humanize {{ "}}" }}%"
+
+          # ── 노드 메모리 과부하 ───────────────────────────────────────────────
+          - alert: NodeHighMemory
+            expr: node:memory_utilization:current > 85
+            for: 10m
+            labels:
+              severity: warning
+              alert_class: resource
+            annotations:
+              summary: "{{ "{{" }} $labels.tenant_id {{ "}}" }} / {{ "{{" }} $labels.service_name {{ "}}" }}: 메모리 {{ "{{" }} $value | humanize {{ "}}" }}%"
+
+          # ── OTel Agent 연결 끊김 감지 ───────────────────────────────────────
+          - alert: OTelAgentDown
+            expr: |
+              absent_over_time(
+                http_requests_total[10m]
+              ) == 1
+            for: 5m
+            labels:
+              severity: critical
+              alert_class: availability
+            annotations:
+              summary: "{{ "{{" }} $labels.tenant_id {{ "}}" }} / {{ "{{" }} $labels.service_name {{ "}}" }}: 메트릭 수집 중단"
+              description: "10분간 메트릭 수신 없음 — OTel Agent 상태 확인"
+
+      - name: tuniverse_service_alerts
+        rules:
+          # Demo 2: 서비스 다운 감지 → Alertmanager → sla-agent-service webhook
+          - alert: TUniverseServiceDown
+            expr: up{job=~"tuniverse-.*"} == 0
+            for: 30s
+            labels:
+              severity: critical
+              tenant_id: SKT
+              alert_class: availability
+            annotations:
+              summary: "T-Universe 서비스 장애: {{ "{{" }} $labels.job {{ "}}" }}"
+              description: "SLA 위반 위험: {{ "{{" }} $labels.job {{ "}}" }} 서비스가 응답하지 않습니다."
+
+          # Demo 1: 배치 실행 중 INFO — alert_class=expected_behavior
+          - alert: BillingBatchRunning
+            expr: batch_job_status{service_name="billing-settlement-batch"} == 1
+            for: 0s
+            labels:
+              severity: info
+              tenant_id: SKT
+              alert_class: expected_behavior
+            annotations:
+              summary: "정산 배치 실행 중 — CPU 급증 정상"
+              description: "SLA 기준은 정확도 99.99% + 완료시각 06:00. CPU는 SLA 지표 아님."

@@ -24,6 +24,9 @@ spec:
         - name: config
           configMap:
             name: prometheus-config
+        - name: rules
+          configMap:
+            name: prometheus-rules
         - name: tenant-rules
           persistentVolumeClaim:
             claimName: tenant-rules
@@ -41,6 +44,8 @@ spec:
             - name: config
               mountPath: /etc/prometheus/prometheus.yml
               subPath: prometheus.yml
+            - name: rules
+              mountPath: /etc/prometheus/rules
             - name: tenant-rules
               mountPath: /etc/prometheus/tenant-rules
             - name: prometheus-data
