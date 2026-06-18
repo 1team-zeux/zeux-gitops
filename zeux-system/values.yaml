@@ -109,7 +109,7 @@ ingress:
     secretName: api-zeux-tls
 frontend:
   image: 1team-frontend
-  imageTag: "4ae3fbea0725d36ca3227c7060a955f286c55311"
+  imageTag: "303928da5c1b5b0c7acb29a0ca2e953295b20d1c"
   replicas: 1
   resources:
     requests:
