@@ -28,17 +28,17 @@ data:
     receivers:
       - name: default
         webhook_configs:
-          - url: {{ .Values.alertmanager.slaAgentUrl }}/api/v1/alerts
+          - url: {{ .Values.alertmanager.slaAgentUrl }}/api/triage/webhook/alerts
             send_resolved: true
 
       - name: critical-alerts
         webhook_configs:
-          - url: {{ .Values.alertmanager.slaAgentUrl }}/api/v1/alerts
+          - url: {{ .Values.alertmanager.slaAgentUrl }}/api/triage/webhook/alerts
             send_resolved: true
 
       - name: slo-engine-webhook
         webhook_configs:
-          - url: {{ .Values.alertmanager.slaAgentUrl }}/api/v1/alerts
+          - url: {{ .Values.alertmanager.slaAgentUrl }}/api/triage/webhook/alerts
             send_resolved: true
 
     inhibit_rules:

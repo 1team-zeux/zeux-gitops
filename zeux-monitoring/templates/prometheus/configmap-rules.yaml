@@ -305,3 +305,97 @@ data:
             annotations:
               summary: "정산 배치 실행 중 — CPU 급증 정상"
               description: "SLA 기준은 정확도 99.99% + 완료시각 06:00. CPU는 SLA 지표 아님."
+
+      # ─────────────────────────────────────────────────────────────
+      # Subscription Surge 시나리오 알람 (Subscription.md 매칭)
+      # ─────────────────────────────────────────────────────────────
+      - name: tuniverse_surge_alerts
+        interval: 15s
+        rules:
+          - alert: HighRequestRate
+            expr: |
+              sum by (job) (
+                rate(http_server_requests_seconds_count{job=~"tuniverse-.*", uri!~"/actuator.*"}[1m])
+              ) > 50
+            for: 30s
+            labels:
+              severity: critical
+              tenant_id: SKT
+              service: subscription-api
+              alert_class: traffic
+            annotations:
+              summary: "{{ "{{" }} $labels.job {{ "}}" }} 요청량 임계치 초과"
+              description: "1분 평균 {{ "{{" }} $value | printf \"%.1f\" {{ "}}" }} req/s (임계 50)"
+
+          - alert: HighLatencyP95
+            expr: |
+              histogram_quantile(0.95,
+                sum by (job, le) (rate(http_server_requests_seconds_bucket{job=~"tuniverse-.*", uri!~"/actuator.*"}[2m]))
+              ) > 0.5
+            for: 1m
+            labels:
+              severity: critical
+              tenant_id: SKT
+              service: subscription-api
+              alert_class: latency
+            annotations:
+              summary: "{{ "{{" }} $labels.job {{ "}}" }} p95 응답시간 임계치 초과"
+              description: "p95 {{ "{{" }} $value | printf \"%.2f\" {{ "}}" }}s (임계 0.5s)"
+
+          - alert: ErrorRate5xx
+            expr: |
+              (
+                sum by (job) (rate(http_server_requests_seconds_count{job=~"tuniverse-.*", status=~"5.."}[1m]))
+                /
+                sum by (job) (rate(http_server_requests_seconds_count{job=~"tuniverse-.*"}[1m]))
+              ) > 0.05
+            for: 30s
+            labels:
+              severity: critical
+              tenant_id: SKT
+              service: subscription-api
+              alert_class: error
+            annotations:
+              summary: "{{ "{{" }} $labels.job {{ "}}" }} 5xx 오류율 임계치 초과"
+              description: "5xx 비율 {{ "{{" }} $value | printf \"%.2f\" {{ "}}" }} (임계 5%)"
+
+          - alert: HighCPU
+            expr: process_cpu_usage{job=~"tuniverse-.*"} > 0.8
+            for: 1m
+            labels:
+              severity: critical
+              tenant_id: SKT
+              service: subscription-api
+              alert_class: resource
+            annotations:
+              summary: "{{ "{{" }} $labels.job {{ "}}" }} CPU 사용률 임계치 초과"
+              description: "process_cpu_usage {{ "{{" }} $value | printf \"%.2f\" {{ "}}" }} (임계 0.8)"
+
+          - alert: HighMemory
+            expr: |
+              (
+                sum by (job) (jvm_memory_used_bytes{job=~"tuniverse-.*", area="heap"})
+                /
+                sum by (job) (jvm_memory_max_bytes{job=~"tuniverse-.*", area="heap"})
+              ) > 0.75
+            for: 2m
+            labels:
+              severity: warning
+              tenant_id: SKT
+              service: subscription-api
+              alert_class: resource
+            annotations:
+              summary: "{{ "{{" }} $labels.job {{ "}}" }} 메모리 사용률 임계치 초과"
+              description: "Heap {{ "{{" }} $value | printf \"%.2f\" {{ "}}" }} (임계 0.75)"
+
+          - alert: ErrorBudgetFastBurn
+            expr: rate(subscription_errors_total[5m]) > 0.5
+            for: 30s
+            labels:
+              severity: critical
+              tenant_id: SKT
+              service: subscription-api
+              alert_class: burn_rate
+            annotations:
+              summary: "subscription-api Error Budget fast burn 감지"
+              description: "validation 오류 {{ "{{" }} $value | printf \"%.2f\" {{ "}}" }} /s — fast burn"
